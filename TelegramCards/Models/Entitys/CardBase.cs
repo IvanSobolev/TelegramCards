@@ -5,7 +5,7 @@ namespace TelegramCards.Models.Entitys;
 public class CardBase
 {
     public Rarity RarityLevel { get; set; }
-    public long CardIndex { get; set; }
+    public int CardIndex { get; set; }
     public string CardPhotoUrl { get; set; }
     public int Points { get; set; }
     

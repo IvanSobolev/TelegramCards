@@ -1,8 +1,10 @@
 ﻿using TelegramCards.Models.Entitys;
+using TelegramCards.Models.Enum;
 
 namespace TelegramCards.Services.interfaces;
 
 public interface ICardBaseGeneratorService
 {
-   Task<long> GetRandomBaseCardIdAsync();
+   Task<Rarity> GetRandomRarityAsync();
+   Task<int> GetRandomCardIndexByRarityAsync(Rarity rarity);
 }

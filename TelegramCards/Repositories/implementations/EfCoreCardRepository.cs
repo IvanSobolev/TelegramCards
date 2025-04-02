@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using TelegramCards.Models;
 using TelegramCards.Models.Entitys;
+using TelegramCards.Models.Enum;
 using TelegramCards.Repositories.Interfaces;
 using TelegramCards.Services.interfaces;
 
@@ -13,12 +14,14 @@ public class EfCoreCardRepository(DataContext dataContext, ICardBaseGeneratorSer
     
     public async Task<Card> GenerateNewCardToUserAsync(long userTelegramId)
     {
+        Rarity rarity = await _cardBaseGenerator.GetRandomRarityAsync();
         Card newCard = new Card
             { 
                 OwnerId = userTelegramId, 
-                BaseCardId = await _cardBaseGenerator.GetRandomBaseCardIdAsync(),
-                GenerateCard = DateTime.UtcNow,
-                UserReceivedCard = DateTime.UtcNow
+                RarityLevel = rarity,
+                CardIndex = await _cardBaseGenerator.GetRandomCardIndexByRarityAsync(rarity),
+                GenerationDate = DateTime.UtcNow,
+                ReceivedCard = DateTime.UtcNow
             };
 
         _dataContext.Cards.Add(newCard);
