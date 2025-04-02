@@ -1,8 +1,10 @@
-﻿namespace TelegramCards.Repositories.Interfaces;
+﻿using TelegramCards.Models.Entitys;
+
+namespace TelegramCards.Repositories.Interfaces;
 
 public interface ICardRepository
 {
-    Task GenerateNewCardToUserAsync(long userTelegramId);
-    Task GetUserCardsAsync(long ownerId);
-    Task SendCardsAsync(long cardId, long newOwnerId);
+    Task<Card> GenerateNewCardToUserAsync(long userTelegramId);
+    Task<ICollection<Card>> GetUserCardsAsync(long ownerId, int page, int pageSize);
+    Task<Card> SendCardAsync(long senderId, long newOwnerId, long cardId);
 }
