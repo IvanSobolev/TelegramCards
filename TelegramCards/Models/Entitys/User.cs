@@ -1,8 +1,11 @@
-﻿namespace TelegramCards.Models.Entitys;
+﻿using TelegramCards.Models.Enum;
+
+namespace TelegramCards.Models.Entitys;
 
 public class User
 {
     public long TelegramId { get; set; }
     public string Username { get; set; }
+    public Roles Role { get; set; }
     public ICollection<Card> Cards { get; set; }
 }
