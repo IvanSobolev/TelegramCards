@@ -63,7 +63,7 @@ public class EfCoreCardRepository(DataContext dataContext, ICardBaseGeneratorSer
                                         .Take(pageSize)
                                         .ToListAsync();
 
-        int cardCount = cards.Count();
+        int cardCount = await query.CountAsync();
 
         return (cards, (cardCount + pageSize - 1) / pageSize);
     }
