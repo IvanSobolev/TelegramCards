@@ -20,7 +20,11 @@ public class DataContext(DbContextOptions<DataContext> options) : DbContext(opti
         modelBuilder.Entity<CardBase>()
             .HasMany(e => e.Cards)
             .WithOne(e => e.BaseCard)
-            .HasForeignKey(e => e.BaseCardId)
+            .HasForeignKey(e => new{e.RarityLevel, e.CardIndex})
+            .HasPrincipalKey(e => new{e.RarityLevel, e.CardIndex})
             .IsRequired();
+
+        modelBuilder.Entity<CardBase>()
+            .HasKey(c => new { c.RarityLevel, c.CardIndex });
     }
 }
