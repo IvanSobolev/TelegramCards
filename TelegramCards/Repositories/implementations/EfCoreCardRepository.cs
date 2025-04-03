@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using TelegramCards.Models;
+using TelegramCards.Models.DTO;
 using TelegramCards.Models.Entitys;
-using TelegramCards.Models.Enum;
 using TelegramCards.Repositories.Interfaces;
 using TelegramCards.Services.interfaces;
 
@@ -12,31 +12,52 @@ public class EfCoreCardRepository(DataContext dataContext, ICardBaseGeneratorSer
     private readonly DataContext _dataContext = dataContext;
     private readonly ICardBaseGeneratorService _cardBaseGenerator = generatorService;
     
-    public async Task<Card> GenerateNewCardToUserAsync(long userTelegramId)
+    public async Task<CardOutputDto?> GenerateNewCardToUserAsync(long userTelegramId)
     {
-        Rarity rarity = await _cardBaseGenerator.GetRandomRarityAsync();
+        User? user = await _dataContext.Users.FirstOrDefaultAsync(u => u.TelegramId == userTelegramId);
+        if (user == null || (DateTime.UtcNow - user.LastTakeCard) >= TimeSpan.FromHours(4))
+        {
+            return null;
+        }
+        
+        CardOutputDto newCardOuntput = await _cardBaseGenerator.GetNewCardInRandomCardStackAsync();
+        newCardOuntput.OwnerId = userTelegramId;
+        
         Card newCard = new Card
             { 
                 OwnerId = userTelegramId, 
-                RarityLevel = rarity,
-                CardIndex = await _cardBaseGenerator.GetRandomCardIndexByRarityAsync(rarity),
+                RarityLevel = newCardOuntput.RarityLevel,
+                CardIndex = newCardOuntput.CardIndex,
                 GenerationDate = DateTime.UtcNow,
                 ReceivedCard = DateTime.UtcNow
             };
 
+        user.LastTakeCard = DateTime.UtcNow;
         _dataContext.Cards.Add(newCard);
         await _dataContext.SaveChangesAsync();
 
-        return newCard;
+        return newCardOuntput;
     }
 
-    public async Task<(ICollection<Card> cards, int pageCount)> GetUserCardsAsync(long ownerId, int page, int pageSize)
+    public async Task<(ICollection<CardOutputDto> cards, int pageCount)> GetUserCardsAsync(long ownerId, int page, int pageSize)
     {
         if (page < 1 || pageSize < 1)
         {
-            return (new List<Card>(), 0);
+            return (new List<CardOutputDto>(), 0);
         }
-        var query = _dataContext.Cards.AsQueryable();
+        var query = _dataContext.Cards.AsQueryable()
+                                                            .Select(c => new CardOutputDto
+                                                            {
+                                                                Id = c.Id,
+                                                                OwnerId = c.OwnerId,
+                                                                RarityLevel = c.BaseCard.RarityLevel,
+                                                                CardIndex = c.BaseCard.CardIndex,
+                                                                CardPhotoUrl = c.BaseCard.CardPhotoUrl,
+                                                                Points = c.BaseCard.Points,
+                                                                GenerationDate = c.GenerationDate,
+                                                                ReceivedCard = c.ReceivedCard
+                                                            });
+        
         query = query.Where(c => c.OwnerId == ownerId);
         var cards = await query.Skip(pageSize * (page - 1))
                                         .Take(pageSize)
@@ -47,9 +68,20 @@ public class EfCoreCardRepository(DataContext dataContext, ICardBaseGeneratorSer
         return (cards, (cardCount + pageSize - 1) / pageSize);
     }
 
-    public async Task<Card?> SendCardAsync(long senderId, long newOwnerId, long cardId)
+    public async Task<CardOutputDto?> SendCardAsync(long senderId, long newOwnerId, long cardId)
     {
-        var card = await _dataContext.Cards.FirstOrDefaultAsync(c => c.Id == cardId);
+        var card = await _dataContext.Cards.Select(c => new CardOutputDto
+            {
+                Id = c.Id,
+                OwnerId = c.OwnerId,
+                RarityLevel = c.BaseCard.RarityLevel,
+                CardIndex = c.BaseCard.CardIndex,
+                CardPhotoUrl = c.BaseCard.CardPhotoUrl,
+                Points = c.BaseCard.Points,
+                GenerationDate = c.GenerationDate,
+                ReceivedCard = c.ReceivedCard
+            })
+            .FirstOrDefaultAsync(c => c.Id == cardId);
         if (card == null)
         {
             return null;
