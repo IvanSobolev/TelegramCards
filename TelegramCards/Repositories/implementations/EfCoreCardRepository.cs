@@ -12,6 +12,7 @@ public class EfCoreCardRepository(DataContext dataContext, ICardBaseGeneratorSer
     private readonly DataContext _dataContext = dataContext;
     private readonly ICardBaseGeneratorService _cardBaseGenerator = generatorService;
     
+    /// <inheritdoc/>
     public async Task<CardOutputDto?> GenerateNewCardToUserAsync(long userTelegramId)
     {
         User? user = await _dataContext.Users.FirstOrDefaultAsync(u => u.TelegramId == userTelegramId);
@@ -39,6 +40,7 @@ public class EfCoreCardRepository(DataContext dataContext, ICardBaseGeneratorSer
         return newCardOuntput;
     }
 
+    /// <inheritdoc/>
     public async Task<(ICollection<CardOutputDto> cards, int pageCount)> GetUserCardsAsync(long ownerId, int page, int pageSize)
     {
         if (page < 1 || pageSize < 1)
@@ -68,6 +70,7 @@ public class EfCoreCardRepository(DataContext dataContext, ICardBaseGeneratorSer
         return (cards, (cardCount + pageSize - 1) / pageSize);
     }
 
+    /// <inheritdoc/>
     public async Task<CardOutputDto?> SendCardAsync(long senderId, long newOwnerId, long cardId)
     {
         var card = await _dataContext.Cards.Select(c => new CardOutputDto

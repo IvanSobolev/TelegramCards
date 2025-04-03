@@ -10,6 +10,7 @@ public class EfCoreUserRepository (DataContext dataContext) : IUserRepository
 {
     private readonly DataContext _dataContext = dataContext;
     
+    /// <inheritdoc/>
     public async Task<User> AddNewUserAsync(long telegramId, string username)
     {
         var user = await _dataContext.Users.FirstOrDefaultAsync(u => u.TelegramId == telegramId);
@@ -25,18 +26,21 @@ public class EfCoreUserRepository (DataContext dataContext) : IUserRepository
         return user;
     }
 
+    /// <inheritdoc/>
     public async Task<User?> GetUserByUsernameAsync(string username)
     {
         var user = await _dataContext.Users.FirstOrDefaultAsync(u => u.Username == username);
         return user;
     }
 
+    /// <inheritdoc/>
     public async Task<User?> GetUserByTelegramIdAsync(long telegramId)
     {
         var user = await _dataContext.Users.FirstOrDefaultAsync(u => u.TelegramId == telegramId);
         return user;
     }
 
+    /// <inheritdoc/>
     public async Task<User?> EditUsernameAsync(long telegramId, string newUsername)
     {
         var user = await _dataContext.Users.FirstOrDefaultAsync(u => u.TelegramId == telegramId);

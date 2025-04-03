@@ -10,6 +10,7 @@ public class EfCoreCardBaseRepository (DataContext dataContext) : ICardBaseRepos
 {
     private readonly DataContext _dataContext = dataContext;
     
+    /// <inheritdoc/>
     public async Task<CardBase?> AddNewCardBaseAsync(long adminId, Rarity rarity, string photoUrl, int pointsNumber)
     {
         User? user = await _dataContext.Users.FirstOrDefaultAsync(u => u.TelegramId == adminId);
@@ -26,6 +27,7 @@ public class EfCoreCardBaseRepository (DataContext dataContext) : ICardBaseRepos
         return newCardBase;
     }
 
+    /// <inheritdoc/>
     public async Task<(ICollection<CardBase> cardBases, int PageCount)> GetCardBasesAsync(long adminId, int page, int pageSize)
     {
         if (page < 1 || pageSize < 1)
@@ -47,6 +49,7 @@ public class EfCoreCardBaseRepository (DataContext dataContext) : ICardBaseRepos
         return (cardBases, (cardCount + pageSize - 1) / pageSize);
     }
 
+    /// <inheritdoc/>
     public async Task<int> GetLastIndexInRarity(Rarity rarity)
     {
         return (await _dataContext.CardBases.LastAsync(c => c.RarityLevel == rarity)).CardIndex;
