@@ -42,7 +42,7 @@ public class EfCoreCardBaseRepository (DataContext dataContext) : ICardBaseRepos
 
         List<CardBase> cardBases = await query.Skip(pageSize * (page - 1)).Take(pageSize).ToListAsync();
 
-        int cardCount = cardBases.Count();
+        int cardCount = await query.CountAsync();
 
         return (cardBases, (cardCount + pageSize - 1) / pageSize);
     }
