@@ -7,5 +7,4 @@ public interface ICardBaseManager
 {
     Task<CardBaseOutputDto?> AddNewCardBaseAsync(AddCardBaseDto cardBaseDto);
     Task<(ICollection<CardBaseOutputDto> cardBases, int PageCount)> GetCardBasesAsync(long adminId, int page, int pageSize);
-    Task<int> GetLastIndexInRarity(Rarity rarity);
 }

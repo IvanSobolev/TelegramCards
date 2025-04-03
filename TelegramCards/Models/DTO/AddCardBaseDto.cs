@@ -6,6 +6,6 @@ public class AddCardBaseDto
 {
     public long AdminId { get; set; } 
     public Rarity Rarity{ get; set; } 
-    public string PhotoUrl{ get; set; } 
+    public IFormFile File { get; set; } 
     public int PointsNumber{ get; set; }
 }
