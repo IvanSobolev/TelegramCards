@@ -1,4 +1,5 @@
-﻿using TelegramCards.Models.Entitys;
+﻿using TelegramCards.Models.DTO;
+using TelegramCards.Models.Entitys;
 
 namespace TelegramCards.Repositories.Interfaces;
 
@@ -17,14 +18,14 @@ public interface IUserRepository
     /// </summary>
     /// <param name="username">username lkz gjbcrf</param>
     /// <returns>Найденного пользователя</returns>
-    Task<User?> GetUserByUsernameAsync(string username);
+    Task<UserOutputDto?> GetUserByUsernameAsync(string username);
     
     /// <summary>
     /// Получить пользователя по telegram id
     /// </summary>
     /// <param name="telegramId">telegram id пользователя</param>
     /// <returns>Найденный пользователь</returns>
-    Task<User?> GetUserByTelegramIdAsync(long telegramId);
+    Task<UserOutputDto?> GetUserByTelegramIdAsync(long telegramId);
     
     /// <summary>
     /// Изменение username пользователя, если пользователь его изменил

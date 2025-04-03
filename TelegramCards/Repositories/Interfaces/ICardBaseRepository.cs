@@ -1,4 +1,5 @@
-﻿using TelegramCards.Models.Entitys;
+﻿using TelegramCards.Models.DTO;
+using TelegramCards.Models.Entitys;
 using TelegramCards.Models.Enum;
 
 namespace TelegramCards.Repositories.Interfaces;
@@ -22,7 +23,7 @@ public interface ICardBaseRepository
     /// <param name="page">Страница данных</param>
     /// <param name="pageSize">Число данных на странице</param>
     /// <returns>(все индивидуальные карты на указанной старице, общее количество страниц)</returns>
-    Task<(ICollection<CardBase> cardBases, int PageCount)> GetCardBasesAsync(long adminId, int page, int pageSize);
+    Task<(ICollection<CardBaseOutputDto> cardBases, int PageCount)> GetCardBasesAsync(long adminId, int page, int pageSize);
     
     /// <summary>
     /// Получение индекса последней карты в определенной редкости
