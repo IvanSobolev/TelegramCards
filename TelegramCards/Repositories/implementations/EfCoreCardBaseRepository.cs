@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using TelegramCards.Models;
+using TelegramCards.Models.DTO;
 using TelegramCards.Models.Entitys;
 using TelegramCards.Models.Enum;
 using TelegramCards.Repositories.Interfaces;
@@ -28,21 +29,30 @@ public class EfCoreCardBaseRepository (DataContext dataContext) : ICardBaseRepos
     }
 
     /// <inheritdoc/>
-    public async Task<(ICollection<CardBase> cardBases, int PageCount)> GetCardBasesAsync(long adminId, int page, int pageSize)
+    public async Task<(ICollection<CardBaseOutputDto> cardBases, int PageCount)> GetCardBasesAsync(long adminId, int page, int pageSize)
     {
         if (page < 1 || pageSize < 1)
         {
-            return (new List<CardBase>(), 0);
+            return (new List<CardBaseOutputDto>(), 0);
         }
         User? user = await _dataContext.Users.FirstOrDefaultAsync(u => u.TelegramId == adminId);
         if (user == null || user.Role != Roles.Admin)
         {
-            return (new List<CardBase>(), 0);
+            return (new List<CardBaseOutputDto>(), 0);
         }
 
-        var query = _dataContext.CardBases.AsQueryable();
+        var query = _dataContext.CardBases.Select(cb => new CardBaseOutputDto()
+                                                                {
+                                                                    RarityLevel = cb.RarityLevel,
+                                                                    CardIndex = cb.CardIndex,
+                                                                    CardPhotoUrl = cb.CardPhotoUrl,
+                                                                    Points = cb.Points
+                                                                })
+                                                                .AsQueryable();
 
-        List<CardBase> cardBases = await query.Skip(pageSize * (page - 1)).Take(pageSize).ToListAsync();
+        List<CardBaseOutputDto> cardBases = await query.Skip(pageSize * (page - 1))
+                                                    .Take(pageSize)
+                                                    .ToListAsync();
 
         int cardCount = await query.CountAsync();
 

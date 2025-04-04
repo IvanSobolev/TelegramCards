@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using TelegramCards.Models;
+using TelegramCards.Models.DTO;
 using TelegramCards.Models.Entitys;
 using TelegramCards.Models.Enum;
 using TelegramCards.Repositories.Interfaces;
@@ -19,7 +20,7 @@ public class EfCoreUserRepository (DataContext dataContext) : IUserRepository
             return user;
         }
 
-        user = new User { TelegramId = telegramId, Username = username, Role = Roles.User, Cards = new List<Card>() };
+        user = new User { TelegramId = telegramId, Username = username, Role = Roles.User, LastTakeCard = DateTime.MinValue,Cards = new List<Card>() };
 
         await _dataContext.Users.AddAsync(user);
         await _dataContext.SaveChangesAsync();
@@ -27,16 +28,30 @@ public class EfCoreUserRepository (DataContext dataContext) : IUserRepository
     }
 
     /// <inheritdoc/>
-    public async Task<User?> GetUserByUsernameAsync(string username)
+    public async Task<UserOutputDto?> GetUserByUsernameAsync(string username)
     {
-        var user = await _dataContext.Users.FirstOrDefaultAsync(u => u.Username == username);
+        var user = await _dataContext.Users.Select(u => new UserOutputDto
+                                            {
+                                                TelegramId = u.TelegramId, 
+                                                Username = u.Username,
+                                                Role = u.Role,
+                                                LastTakeCard = u.LastTakeCard
+                                            })
+                                            .FirstOrDefaultAsync(u => u.Username == username);
         return user;
     }
 
     /// <inheritdoc/>
-    public async Task<User?> GetUserByTelegramIdAsync(long telegramId)
+    public async Task<UserOutputDto?> GetUserByTelegramIdAsync(long telegramId)
     {
-        var user = await _dataContext.Users.FirstOrDefaultAsync(u => u.TelegramId == telegramId);
+        var user = await _dataContext.Users.Select(u => new UserOutputDto
+                                            {
+                                                TelegramId = u.TelegramId, 
+                                                Username = u.Username,
+                                                Role = u.Role,
+                                                LastTakeCard = u.LastTakeCard
+                                            })
+                                            .FirstOrDefaultAsync(u => u.TelegramId == telegramId);
         return user;
     }
 

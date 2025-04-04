@@ -1,17 +1,15 @@
 ﻿using TelegramCards.Models.DTO;
-using TelegramCards.Models.Entitys;
 
-namespace TelegramCards.Repositories.Interfaces;
+namespace TelegramCards.Managers.Interfaces;
 
-public interface IUserRepository
+public interface IUserManager
 {
     /// <summary>
     /// Создание нового пользователя (если человека не было в системе)
     /// </summary>
-    /// <param name="telegramId">telegram id пользователя</param>
-    /// <param name="username">username пользователя</param>
+    /// <param name="user">add user DTO с информацией для добавления пользователя</param>
     /// <returns>Добавленный пользователь</returns>
-    Task<User> AddNewUserAsync(long telegramId, string username);
+    Task<UserOutputDto> AddNewUserAsync(AddUserDto user);
     
     /// <summary>
     /// Получение пользователя по username
@@ -33,5 +31,5 @@ public interface IUserRepository
     /// <param name="telegramId">telegram id пользователя</param>
     /// <param name="newUsername">новый username</param>
     /// <returns>Измененный пользователь</returns>
-    Task<User?> EditUsernameAsync(long telegramId, string newUsername);
+    Task<UserOutputDto?> EditUsernameAsync(long telegramId, string newUsername);
 }
