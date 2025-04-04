@@ -6,8 +6,7 @@ public class Card
 {
     public long Id { get; set; }
     public long OwnerId { get; set; }
-    public Rarity RarityLevel { get; set; }
-    public long CardIndex { get; set; }
+    public int CardBaseId { get; set; }
     public DateTime GenerationDate { get; set; }
     public DateTime ReceivedCard { get; set; }
     

@@ -32,7 +32,7 @@ public class CardBaseManager (ICardBaseRepository cardBaseRepository, IFileDrive
 
         return new CardBaseOutputDto
         {
-            RarityLevel = cardBase.RarityLevel, CardIndex = cardBase.CardIndex,
+            RarityLevel = cardBase.RarityLevel, Id = cardBase.Id,
             CardPhotoUrl = cardBase.CardPhotoUrl, Points = cardBase.Points
         };
     }
