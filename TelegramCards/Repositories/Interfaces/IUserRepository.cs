@@ -8,16 +8,16 @@ public interface IUserRepository
     /// <summary>
     /// Создание нового пользователя (если человека не было в системе)
     /// </summary>
-    /// <param name="telegramId"></param>
-    /// <param name="username"></param>
-    /// <returns></returns>
+    /// <param name="telegramId">telegram id пользователя</param>
+    /// <param name="username">username пользователя</param>
+    /// <returns>Добавленный пользователь</returns>
     Task<User> AddNewUserAsync(long telegramId, string username);
     
     /// <summary>
     /// Получение пользователя по username
     /// </summary>
-    /// <param name="username">username lkz gjbcrf</param>
-    /// <returns>Найденного пользователя</returns>
+    /// <param name="username">username для поиска</param>
+    /// <returns>Найденный пользователь</returns>
     Task<UserOutputDto?> GetUserByUsernameAsync(string username);
     
     /// <summary>

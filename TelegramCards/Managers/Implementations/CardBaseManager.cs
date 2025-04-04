@@ -12,6 +12,7 @@ public class CardBaseManager (ICardBaseRepository cardBaseRepository, IFileDrive
     private readonly ICardBaseRepository _cardBaseRepository = cardBaseRepository;
     private readonly IFileDriveService _fileDrive = fileDriveService;
     
+    /// <inheritdoc/>
     public async Task<CardBaseOutputDto?> AddNewCardBaseAsync(AddCardBaseDto cardBaseDto)
     {
         if (!await _fileDrive.ValidateImage(cardBaseDto.File))
@@ -36,6 +37,7 @@ public class CardBaseManager (ICardBaseRepository cardBaseRepository, IFileDrive
         };
     }
 
+    /// <inheritdoc/>
     public async Task<(ICollection<CardBaseOutputDto> cardBases, int PageCount)> GetCardBasesAsync(long adminId, int page, int pageSize)
     {
         return await _cardBaseRepository.GetCardBasesAsync(adminId, page, pageSize);

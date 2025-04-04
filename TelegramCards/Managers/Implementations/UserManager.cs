@@ -9,6 +9,7 @@ public class UserManager (IUserRepository userRepository) : IUserManager
 {
     private readonly IUserRepository _userRepository = userRepository;
     
+    /// <inheritdoc/>
     public async Task<UserOutputDto> AddNewUserAsync(AddUserDto user)
     {
         User newUser = await _userRepository.AddNewUserAsync(user.TelegramId, user.Username);
@@ -21,6 +22,7 @@ public class UserManager (IUserRepository userRepository) : IUserManager
         };
     }
 
+    /// <inheritdoc/>
     public async Task<UserOutputDto?> GetUserByUsernameAsync(string username)
     {
         return await _userRepository.GetUserByUsernameAsync(username);
@@ -31,6 +33,7 @@ public class UserManager (IUserRepository userRepository) : IUserManager
         return await _userRepository.GetUserByTelegramIdAsync(telegramId);
     }
 
+    /// <inheritdoc/>
     public async Task<UserOutputDto?> EditUsernameAsync(long telegramId, string newUsername)
     {
         User? user = await _userRepository.EditUsernameAsync(telegramId, newUsername);
