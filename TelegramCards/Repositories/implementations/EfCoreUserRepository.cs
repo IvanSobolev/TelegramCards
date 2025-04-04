@@ -20,7 +20,7 @@ public class EfCoreUserRepository (DataContext dataContext) : IUserRepository
             return user;
         }
 
-        user = new User { TelegramId = telegramId, Username = username, Role = Roles.User, Cards = new List<Card>() };
+        user = new User { TelegramId = telegramId, Username = username, Role = Roles.User, LastTakeCard = DateTime.MinValue,Cards = new List<Card>() };
 
         await _dataContext.Users.AddAsync(user);
         await _dataContext.SaveChangesAsync();
