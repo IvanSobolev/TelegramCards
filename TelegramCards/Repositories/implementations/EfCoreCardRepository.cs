@@ -26,9 +26,8 @@ public class EfCoreCardRepository(DataContext dataContext, ICardBaseGeneratorSer
         
         Card newCard = new Card
             { 
+                CardBaseId = newCardOuntput.CardBaseId,
                 OwnerId = userTelegramId, 
-                RarityLevel = newCardOuntput.RarityLevel,
-                CardIndex = newCardOuntput.CardIndex,
                 GenerationDate = DateTime.UtcNow,
                 ReceivedCard = DateTime.UtcNow
             };
@@ -52,8 +51,7 @@ public class EfCoreCardRepository(DataContext dataContext, ICardBaseGeneratorSer
                                                             {
                                                                 Id = c.Id,
                                                                 OwnerId = c.OwnerId,
-                                                                RarityLevel = c.BaseCard.RarityLevel,
-                                                                CardIndex = c.BaseCard.CardIndex,
+                                                                CardBaseId = c.CardBaseId,
                                                                 CardPhotoUrl = c.BaseCard.CardPhotoUrl,
                                                                 Points = c.BaseCard.Points,
                                                                 GenerationDate = c.GenerationDate,
@@ -77,8 +75,7 @@ public class EfCoreCardRepository(DataContext dataContext, ICardBaseGeneratorSer
             {
                 Id = c.Id,
                 OwnerId = c.OwnerId,
-                RarityLevel = c.BaseCard.RarityLevel,
-                CardIndex = c.BaseCard.CardIndex,
+                CardBaseId = c.CardBaseId,
                 CardPhotoUrl = c.BaseCard.CardPhotoUrl,
                 Points = c.BaseCard.Points,
                 GenerationDate = c.GenerationDate,

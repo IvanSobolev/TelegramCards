@@ -19,8 +19,7 @@ public class EfCoreCardBaseRepository (DataContext dataContext) : ICardBaseRepos
         {
             return null;
         }
-        int newIndex = await GetLastIndexInRarity(rarity) + 1;
-        CardBase newCardBase = new CardBase { RarityLevel = rarity, CardIndex = newIndex, CardPhotoUrl = photoUrl, Points = pointsNumber };
+        CardBase newCardBase = new CardBase { RarityLevel = rarity, CardPhotoUrl = photoUrl, Points = pointsNumber };
 
         _dataContext.CardBases.Add(newCardBase);
         await _dataContext.SaveChangesAsync();
@@ -43,8 +42,8 @@ public class EfCoreCardBaseRepository (DataContext dataContext) : ICardBaseRepos
 
         var query = _dataContext.CardBases.Select(cb => new CardBaseOutputDto()
                                                                 {
+                                                                    Id = cb.Id,
                                                                     RarityLevel = cb.RarityLevel,
-                                                                    CardIndex = cb.CardIndex,
                                                                     CardPhotoUrl = cb.CardPhotoUrl,
                                                                     Points = cb.Points
                                                                 })
@@ -60,8 +59,11 @@ public class EfCoreCardBaseRepository (DataContext dataContext) : ICardBaseRepos
     }
 
     /// <inheritdoc/>
-    public async Task<int> GetLastIndexInRarity(Rarity rarity)
+    public async Task<CardBase?> GetRandomCardInRarity(Rarity rarity)
     {
-        return (await _dataContext.CardBases.LastAsync(c => c.RarityLevel == rarity)).CardIndex;
+        return await _dataContext.CardBases
+            .Where(cb => cb.RarityLevel == rarity)
+            .OrderBy(c => Guid.NewGuid())
+            .FirstOrDefaultAsync();
     }
 }

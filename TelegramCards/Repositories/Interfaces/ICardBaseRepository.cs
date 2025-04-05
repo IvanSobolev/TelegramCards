@@ -30,6 +30,6 @@ public interface ICardBaseRepository
     /// </summary>
     /// <param name="rarity">Редкость</param>
     /// <returns>Последний индекс карты в редкости</returns>
-    Task<int> GetLastIndexInRarity(Rarity rarity);
+    Task<CardBase?> GetRandomCardInRarity(Rarity rarity);
     
 }
