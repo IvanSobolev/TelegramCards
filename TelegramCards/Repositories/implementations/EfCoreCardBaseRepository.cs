@@ -28,16 +28,16 @@ public class EfCoreCardBaseRepository (DataContext dataContext) : ICardBaseRepos
     }
 
     /// <inheritdoc/>
-    public async Task<(ICollection<CardBaseOutputDto> cardBases, int PageCount)> GetCardBasesAsync(long adminId, int page, int pageSize)
+    public async Task<GetAllCardBaseDto> GetCardBasesAsync(long adminId, int page, int pageSize)
     {
         if (page < 1 || pageSize < 1)
         {
-            return (new List<CardBaseOutputDto>(), 0);
+            return new GetAllCardBaseDto{CardBases = new List<CardBaseOutputDto>(), PageCount = 0};
         }
         User? user = await _dataContext.Users.FirstOrDefaultAsync(u => u.TelegramId == adminId);
         if (user == null || user.Role != Roles.Admin)
         {
-            return (new List<CardBaseOutputDto>(), 0);
+            return new GetAllCardBaseDto{CardBases = new List<CardBaseOutputDto>(), PageCount = 0};
         }
 
         var query = _dataContext.CardBases.Select(cb => new CardBaseOutputDto()
@@ -55,15 +55,24 @@ public class EfCoreCardBaseRepository (DataContext dataContext) : ICardBaseRepos
 
         int cardCount = await query.CountAsync();
 
-        return (cardBases, (cardCount + pageSize - 1) / pageSize);
+        return new GetAllCardBaseDto{CardBases = cardBases, PageCount = (cardCount + pageSize - 1) / pageSize};
     }
 
     /// <inheritdoc/>
     public async Task<CardBase?> GetRandomCardInRarity(Rarity rarity)
     {
+        int count = await _dataContext.CardBases
+            .Where(cb => cb.RarityLevel == rarity)
+            .CountAsync();
+
+        if (count == 0)
+            return null;
+
+        int index = Random.Shared.Next(count);
+
         return await _dataContext.CardBases
             .Where(cb => cb.RarityLevel == rarity)
-            .OrderBy(c => Guid.NewGuid())
+            .Skip(index)
             .FirstOrDefaultAsync();
     }
 }

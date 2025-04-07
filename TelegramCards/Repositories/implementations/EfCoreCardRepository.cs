@@ -16,7 +16,7 @@ public class EfCoreCardRepository(DataContext dataContext, ICardBaseGeneratorSer
     public async Task<CardOutputDto?> GenerateNewCardToUserAsync(long userTelegramId)
     {
         User? user = await _dataContext.Users.FirstOrDefaultAsync(u => u.TelegramId == userTelegramId);
-        if (user == null || (DateTime.UtcNow - user.LastTakeCard) >= TimeSpan.FromHours(4))
+        if (user == null || (DateTime.UtcNow - user.LastTakeCard) <= TimeSpan.FromHours(4))
         {
             return null;
         }
@@ -40,11 +40,11 @@ public class EfCoreCardRepository(DataContext dataContext, ICardBaseGeneratorSer
     }
 
     /// <inheritdoc/>
-    public async Task<(ICollection<CardOutputDto> cards, int pageCount)> GetUserCardsAsync(long ownerId, int page, int pageSize)
+    public async Task<GetAllUserCardDto> GetUserCardsAsync(long ownerId, int page, int pageSize)
     {
         if (page < 1 || pageSize < 1)
         {
-            return (new List<CardOutputDto>(), 0);
+            return new GetAllUserCardDto{Cards = new List<CardOutputDto>(), PageCount = 0};
         }
         var query = _dataContext.Cards.AsQueryable()
                                                             .Select(c => new CardOutputDto
@@ -65,22 +65,14 @@ public class EfCoreCardRepository(DataContext dataContext, ICardBaseGeneratorSer
 
         int cardCount = await query.CountAsync();
 
-        return (cards, (cardCount + pageSize - 1) / pageSize);
+        return  new GetAllUserCardDto{Cards = cards, PageCount = (cardCount + pageSize - 1) / pageSize};
     }
 
     /// <inheritdoc/>
     public async Task<CardOutputDto?> SendCardAsync(long senderId, long newOwnerId, long cardId)
     {
-        var card = await _dataContext.Cards.Select(c => new CardOutputDto
-            {
-                Id = c.Id,
-                OwnerId = c.OwnerId,
-                CardBaseId = c.CardBaseId,
-                CardPhotoUrl = c.BaseCard.CardPhotoUrl,
-                Points = c.BaseCard.Points,
-                GenerationDate = c.GenerationDate,
-                ReceivedCard = c.ReceivedCard
-            })
+        var card = await _dataContext.Cards
+            .Include(c => c.BaseCard)
             .FirstOrDefaultAsync(c => c.Id == cardId);
         if (card == null)
         {
@@ -88,11 +80,30 @@ public class EfCoreCardRepository(DataContext dataContext, ICardBaseGeneratorSer
         }
         if (card.OwnerId != senderId)
         {
-            return card;
+            return new CardOutputDto
+            {
+                Id = card.Id,
+                OwnerId = card.OwnerId,
+                CardBaseId = card.CardBaseId,
+                CardPhotoUrl = card.BaseCard.CardPhotoUrl,
+                Points = card.BaseCard.Points,
+                GenerationDate = card.GenerationDate,
+                ReceivedCard = card.ReceivedCard
+            };
         }
 
         card.OwnerId = newOwnerId;
+        card.ReceivedCard = DateTime.UtcNow;
         await _dataContext.SaveChangesAsync();
-        return card;
+        return new CardOutputDto
+        {
+            Id = card.Id,
+            OwnerId = card.OwnerId,
+            CardBaseId = card.CardBaseId,
+            CardPhotoUrl = card.BaseCard.CardPhotoUrl,
+            Points = card.BaseCard.Points,
+            GenerationDate = card.GenerationDate,
+            ReceivedCard = card.ReceivedCard
+        };
     }
 }

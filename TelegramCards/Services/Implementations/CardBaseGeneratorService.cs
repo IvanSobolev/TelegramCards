@@ -6,9 +6,9 @@ using TelegramCards.Services.interfaces;
 
 namespace TelegramCards.Services.Implementations;
 
-public class CardBaseGeneratorService(ICardBaseRepository cardBaseRepository, int generateLengthStack) : ICardBaseGeneratorService
+public class CardBaseGeneratorService(IServiceScopeFactory scopeFactory, int generateLengthStack) : ICardBaseGeneratorService
 {
-    private readonly ICardBaseRepository _cardBaseRepository = cardBaseRepository;
+    private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
     private readonly int _generateLengthStack = generateLengthStack;
     private readonly ConcurrentQueue<CardOutputDto> _cacheCardBaseStack = new();
     private DateTime _lastCacheUpdate = DateTime.UtcNow;
@@ -36,8 +36,10 @@ public class CardBaseGeneratorService(ICardBaseRepository cardBaseRepository, in
 
     public async Task<CardOutputDto> GetNewRandomCardInDb()
     {
+        using var scope = _scopeFactory.CreateScope();
+        var repository = scope.ServiceProvider.GetRequiredService<ICardBaseRepository>();
         Rarity rarity = (Rarity)_random.Next(0, 3);
-        var card = await _cardBaseRepository.GetRandomCardInRarity(rarity);
+        var card = await repository.GetRandomCardInRarity(rarity);
         return new CardOutputDto
         {
             CardBaseId = card.Id,

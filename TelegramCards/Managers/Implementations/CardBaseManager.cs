@@ -38,7 +38,7 @@ public class CardBaseManager (ICardBaseRepository cardBaseRepository, IFileDrive
     }
 
     /// <inheritdoc/>
-    public async Task<(ICollection<CardBaseOutputDto> cardBases, int PageCount)> GetCardBasesAsync(long adminId, int page, int pageSize)
+    public async Task<GetAllCardBaseDto> GetCardBasesAsync(long adminId, int page, int pageSize)
     {
         return await _cardBaseRepository.GetCardBasesAsync(adminId, page, pageSize);
     }
