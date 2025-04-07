@@ -61,9 +61,18 @@ public class EfCoreCardBaseRepository (DataContext dataContext) : ICardBaseRepos
     /// <inheritdoc/>
     public async Task<CardBase?> GetRandomCardInRarity(Rarity rarity)
     {
+        int count = await _dataContext.CardBases
+            .Where(cb => cb.RarityLevel == rarity)
+            .CountAsync();
+
+        if (count == 0)
+            return null;
+
+        int index = Random.Shared.Next(count);
+
         return await _dataContext.CardBases
             .Where(cb => cb.RarityLevel == rarity)
-            .OrderBy(c => Guid.NewGuid())
+            .Skip(index)
             .FirstOrDefaultAsync();
     }
 }

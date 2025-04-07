@@ -11,8 +11,8 @@ public class CardBaseController (ICardBaseManager cardBaseManager ) : Controller
     private readonly ICardBaseManager _cardBaseManager = cardBaseManager;
     
     [HttpPost]
-    [Route("/add")]
-    public async Task<IActionResult> AddNewCardBaseAsync([FromBody] AddCardBaseDto cardBaseDto)
+    [Route("add")]
+    public async Task<IActionResult> AddNewCardBaseAsync([FromForm] AddCardBaseDto cardBaseDto)
     {
         var cardBase = await _cardBaseManager.AddNewCardBaseAsync(cardBaseDto);
         if (cardBase == null)
@@ -24,7 +24,7 @@ public class CardBaseController (ICardBaseManager cardBaseManager ) : Controller
     }
 
     [HttpGet]
-    [Route("/get/{adminId}/{page}/{pageSize}")]
+    [Route("get/{adminId}/{page}/{pageSize}")]
     public async Task<IActionResult> GetCardBasesAsync(long adminId, int page, int pageSize)
     {
         var cardBases = await _cardBaseManager.GetCardBasesAsync(adminId, page, pageSize);

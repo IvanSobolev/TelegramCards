@@ -18,7 +18,7 @@ public interface ICardManager
     /// <param name="page">Страница данных</param>
     /// <param name="pageSize">Количество данных на странице</param>
     /// <returns>(все карты пользователя на указанной старице, общее количество страниц)</returns>
-    Task<(ICollection<CardOutputDto> cards, int pageCount)> GetUserCardsAsync(long ownerId, int page, int pageSize);
+    Task<GetAllUserCardDto> GetUserCardsAsync(long ownerId, int page, int pageSize);
     
     /// <summary>
     /// Отправить карту другому пользователя

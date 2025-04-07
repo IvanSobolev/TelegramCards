@@ -15,7 +15,7 @@ public class CardManager(ICardRepository cardRepository) : ICardManager
     }
 
     /// <inheritdoc/>
-    public async Task<(ICollection<CardOutputDto> cards, int pageCount)> GetUserCardsAsync(long ownerId, int page, int pageSize)
+    public async Task<GetAllUserCardDto> GetUserCardsAsync(long ownerId, int page, int pageSize)
     {
         return await _cardRepository.GetUserCardsAsync(ownerId, page, pageSize);
     }
