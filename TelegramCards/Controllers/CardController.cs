@@ -11,7 +11,7 @@ public class CardController (ICardManager cardManager) : ControllerBase
     private readonly ICardManager _cardManager = cardManager;
 
     [HttpGet]
-    [Route("/generate/{id}")]
+    [Route("generate/{id}")]
     public async Task<IActionResult> GenerateCardAsync(long id)
     {
         var card = await _cardManager.GenerateNewCardToUserAsync(id);
@@ -24,7 +24,7 @@ public class CardController (ICardManager cardManager) : ControllerBase
     }
     
     [HttpGet]
-    [Route("/get/user/{id}/{page}/{pageSize}")]
+    [Route("get/user/{id}/{page}/{pageSize}")]
     public async Task<IActionResult> GetAllUserCard(long id, int page, int pageSize)
     {
         var cards = await _cardManager.GetUserCardsAsync(id, page, pageSize);
@@ -32,7 +32,7 @@ public class CardController (ICardManager cardManager) : ControllerBase
     }
     
     [HttpPut]
-    [Route("/send")]
+    [Route("send")]
     public async Task<IActionResult> SendCard([FromBody] SendCardDto cardDto)
     {
         var card = await _cardManager.SendCardAsync(cardDto);
