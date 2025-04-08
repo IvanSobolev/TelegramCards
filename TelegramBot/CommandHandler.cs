@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Globalization;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
@@ -14,7 +15,6 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
     private readonly ICardRepository _cardRepository = cardRepository;
     private readonly IUserRepository _userRepository = userRepository;
     private readonly Dictionary<long, DateTime> _userGeneratorDate = new Dictionary<long, DateTime>(); 
-    private readonly Dictionary<long, int> _userLastPageCard = new Dictionary<long, int>(); 
     
     ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup(new[]
     {
@@ -121,8 +121,7 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
 
     public async Task GetMyCardsCommand(Message msg)
     {
-        _userLastPageCard[msg.Chat.Id] = 1;
-        AllUserCardDto cardDto = await _cardRepository.GetAllUserCardAsync(msg.Chat.Id, _userLastPageCard[msg.Chat.Id], 1);
+        AllUserCardDto cardDto = await _cardRepository.GetAllUserCardAsync(msg.Chat.Id, 1, 1);
         if (cardDto.Cards.Count < 1 || cardDto.PageCount == 0)
         {
             await bot.SendMessage(msg.Chat.Id, "У вас еще нет карт.");
@@ -134,7 +133,36 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
 
         await SendCardAsync(msg.Chat.Id, card, 1, cardDto.PageCount);
     }
+
+    public async Task GetAnotherCardButtonAsync(CallbackQuery query)
+    {
+        Message msg = query.Message!;
+        await bot.DeleteMessage(msg.Chat.Id, msg.MessageId);
+        int newIndex = int.Parse(query.Data!.Split('_')[1], CultureInfo.InvariantCulture);
+        AllUserCardDto cardDto = await _cardRepository.GetAllUserCardAsync(msg.Chat.Id, newIndex, 1);
+        if (cardDto.Cards.Count < 1 || cardDto.PageCount == 0)
+        {
+            await bot.SendMessage(msg.Chat.Id, "У вас нет этой карты");
+            return;
+        }
+
+        await SendCardAsync(query.Message!.Chat.Id, cardDto.Cards.First(), newIndex, cardDto.PageCount);
+    }
     
+    public async Task ExitSliderButtonAsync(CallbackQuery query)
+    {
+        Message msg = query.Message!;
+        await bot.DeleteMessage(msg.Chat.Id, msg.MessageId);
+        int newIndex = int.Parse(query.Data!.Split('_')[1], CultureInfo.InvariantCulture);
+        AllUserCardDto cardDto = await _cardRepository.GetAllUserCardAsync(msg.Chat.Id, newIndex, 1);
+        if (cardDto.Cards.Count < 1 || cardDto.PageCount == 0)
+        {
+            await bot.SendMessage(msg.Chat.Id, "У вас нет этой карты");
+            return;
+        }
+
+        await SendCardAsync(query.Message!.Chat.Id, cardDto.Cards.First(), newIndex, cardDto.PageCount);
+    }
     
     public async Task SendCardAsync(long chatId, CardOutputDto card, int page, int lastPage)
     {
@@ -144,24 +172,24 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
     
         if (lastPage > 3 && page > 3)
         {
-            navButtons.Add(InlineKeyboardButton.WithCallbackData("<< Первая", $"prev_1"));
+            navButtons.Add(InlineKeyboardButton.WithCallbackData("<< Первая", $"card_1"));
         }
         
         if (page > 1)
         {
-            navButtons.Add(InlineKeyboardButton.WithCallbackData("< Назад", $"prev_{page - 1}"));
+            navButtons.Add(InlineKeyboardButton.WithCallbackData("< Назад", $"card_{page - 1}"));
         }
 
-        navButtons.Add(InlineKeyboardButton.WithCallbackData($"{page}/{lastPage}", "current_page"));
+        navButtons.Add(InlineKeyboardButton.WithCallbackData($"{page}/{lastPage}", "zero"));
 
         if (page < lastPage)
         {
-            navButtons.Add(InlineKeyboardButton.WithCallbackData("Вперёд >", $"next_{page + 1}"));
+            navButtons.Add(InlineKeyboardButton.WithCallbackData("Вперёд >", $"card_{page + 1}"));
         }
         
         if (page < lastPage - 2 && lastPage > 3)
         {
-            navButtons.Add(InlineKeyboardButton.WithCallbackData("Последняя >>", $"next_{lastPage}"));
+            navButtons.Add(InlineKeyboardButton.WithCallbackData("Последняя >>", $"card_{lastPage}"));
         }
     
         buttons.Add(navButtons.ToArray());
@@ -182,7 +210,7 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
             await _bot.SendPhoto(
                 chatId: chatId,
                 photo: InputFile.FromStream(stream, "card.png"),
-                caption: $"Карта #{card.Id}\nОчки: {card.Points}\nСоздана {card.GenerationDate:dd/MM/yyyy}",
+                caption: $"Карта #{card.CardBaseId}\nОчки: {card.Points}\nСоздана {card.GenerationDate:dd/MM/yyyy}",
                 replyMarkup: inlineKeyboard
             );
         }

@@ -52,16 +52,22 @@ class Program
                 await _commandHandler.GetMyCardsCommand(msg);
                 break;
         }
-        
-        await bot.SendMessage(msg.Chat, $"{msg.From} said: {msg.Text}");
     }
     
     static async Task OnUpdate(Update update)
     {
         if (update is { CallbackQuery: { } query })
         {
-            await bot.AnswerCallbackQuery(query.Id, $"You picked {query.Data}");
-            await bot.SendMessage(query.Message!.Chat, $"User {query.From} clicked on {query.Data}");
+            switch (query.Data!.Split('_')[0])
+            {
+                case ("zero"):
+                    await bot.AnswerCallbackQuery(query.Id, $"❌❌❌");
+                    break;
+                case ("card"):
+                    await _commandHandler.GetAnotherCardButtonAsync(query);
+                    break;
+                
+            }
         }
     }
     
