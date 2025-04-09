@@ -15,6 +15,7 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
     private readonly ICardRepository _cardRepository = cardRepository;
     private readonly IUserRepository _userRepository = userRepository;
     private readonly Dictionary<long, DateTime> _userGeneratorDate = new Dictionary<long, DateTime>(); 
+    private readonly Dictionary<long, SendCardDto> _userStarSendCard = new Dictionary<long, SendCardDto>(); 
     
     ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup(new[]
     {
@@ -105,7 +106,7 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
             await _bot.SendPhoto(
                 chatId: msg.Chat.Id,
                 photo: InputFile.FromStream(stream, "card.png"),
-                caption: $"Вот ваша новая карточка!\nОчки: {card.Points}"
+                caption: $"Вот ваша новая карточка!\nРедкость: {card.RarityLevel.ToString()}\nОчки: {card.Points}"
             );
             _userGeneratorDate[msg.Chat.Id] = DateTime.UtcNow;
         }
@@ -134,6 +135,45 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
         await SendCardAsync(msg.Chat.Id, card, 1, cardDto.PageCount);
     }
 
+    public async Task NoCommandMessage(Message msg)
+    {
+        if (_userStarSendCard.TryGetValue(msg.Chat.Id, out var lastTry) && msg.Text![0] == '@')
+        {
+            var user = await _userRepository.GetUserByUsernameAsync(msg.Text!.Split('@')[1]);
+            if (user == null)
+            {
+                await bot.SendMessage(msg.Chat.Id,
+                    "Пользователь не найден, попробуйте кого-то другого\n(Если пользователя нет в игре, или он менял username попроси написать /start в бота)",
+                    replyMarkup: new InlineKeyboardMarkup(new[]{InlineKeyboardButton.WithCallbackData("❌Отмена отправки карты", $"exit")}));
+            }
+
+            lastTry.NewOwnerId = user.TelegramId;
+            var card = await _cardRepository.SendCardAsync(lastTry);
+            await bot.SendMessage(msg.Chat.Id,
+                $"Ваша карта отправлена пользователю @{user.Username}");
+            try
+            {
+                using var httpClient = new HttpClient();
+                byte[] imageBytes = await httpClient.GetByteArrayAsync(card.CardPhotoUrl);
+            
+                using var stream = new MemoryStream(imageBytes);
+                await _bot.SendPhoto(
+                    chatId: user.TelegramId,
+                    photo: InputFile.FromStream(stream, "card.png"),
+                    caption: $"Пользователь @{msg.From!.Username} отправил вам карту #{card.CardBaseId}\nРедкость: {card.RarityLevel.ToString()}\nОчки: {card.Points}\nСоздана {card.GenerationDate:dd/MM/yyyy}"
+                );
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error sending photo: {ex.Message}");
+                await _bot.SendMessage(
+                    chatId: user.TelegramId,
+                    text: $"Пользователь @{msg.From!.Username} отправил вам карту #{card.CardBaseId}\nРедкость: {card.RarityLevel.ToString()}\nОчки: {card.Points}\nСоздана {card.GenerationDate:dd/MM/yyyy}\n(К сожалению, с картинкой, что-то пошло не так)"
+                );
+            }
+        }
+    }
+
     public async Task GetAnotherCardButtonAsync(CallbackQuery query)
     {
         Message msg = query.Message!;
@@ -152,7 +192,19 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
     public async Task ExitSliderButtonAsync(CallbackQuery query)
     {
         Message msg = query.Message!;
+        _userStarSendCard.Remove(query.From.Id);
+        await bot.DeleteMessage(query.From.Id, msg.MessageId);
+    }
+
+    public async Task SendCardButtonAsync(CallbackQuery query)
+    {
+        Message msg = query.Message!;
         await bot.DeleteMessage(msg.Chat.Id, msg.MessageId);
+        int cardId = int.Parse(query.Data!.Split('_')[1], CultureInfo.InvariantCulture);
+        await bot.SendMessage(query.From.Id,
+            "Отправь @username пользователя, которому хочешь отправить эту карту\n(Если пользователя нет в игре, или он менял username попроси написать /start в бота)\nПример: @example",
+            replyMarkup: new InlineKeyboardMarkup(new[]{InlineKeyboardButton.WithCallbackData("❌Отмена отправки карты", $"exit")}));
+        _userStarSendCard.Add(query.From.Id, new SendCardDto{SenderId = query.From.Id, CardId = cardId, NewOwnerId = 0});
     }
     
     public async Task SendCardAsync(long chatId, CardOutputDto card, int page, int lastPage)
@@ -187,6 +239,11 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
         
         buttons.Add(new[]
         {
+            InlineKeyboardButton.WithCallbackData("📻Отправить карту игроку", $"send_{card.Id}")
+        });
+        
+        buttons.Add(new[]
+        {
             InlineKeyboardButton.WithCallbackData("🍕 Выйти", "exit")
         });
 
@@ -201,7 +258,7 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
             await _bot.SendPhoto(
                 chatId: chatId,
                 photo: InputFile.FromStream(stream, "card.png"),
-                caption: $"Карта #{card.CardBaseId}\nОчки: {card.Points}\nСоздана {card.GenerationDate:dd/MM/yyyy}",
+                caption: $"Карта #{card.CardBaseId}\nРедкость: {card.RarityLevel.ToString()}\nОчки: {card.Points}\nСоздана {card.GenerationDate:dd/MM/yyyy}",
                 replyMarkup: inlineKeyboard
             );
         }
@@ -210,7 +267,7 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
             Console.WriteLine($"Error sending photo: {ex.Message}");
             await _bot.SendMessage(
                 chatId: chatId,
-                text: $"Карта #{card.Id}\nОчки: {card.Points}\nСоздана {card.GenerationDate:dd/MM/yyyy}\n(К сожалению, с картинкой, что-то пошло не так)",
+                text: $"Карта #{card.CardBaseId}\nРедкость: {card.RarityLevel.ToString()}\nОчки: {card.Points}\nСоздана {card.GenerationDate:dd/MM/yyyy}\n(К сожалению, с картинкой, что-то пошло не так)",
                 replyMarkup: inlineKeyboard
             );
         }

@@ -51,6 +51,9 @@ class Program
             case ("🧊 Посмотреть карты"):
                 await _commandHandler.GetMyCardsCommand(msg);
                 break;
+            default:
+                await _commandHandler.NoCommandMessage(msg);
+                break;
         }
     }
     
@@ -68,6 +71,9 @@ class Program
                     break;
                 case ("exit"):
                     await _commandHandler.ExitSliderButtonAsync(query);
+                    break;
+                case ("send"):
+                    await _commandHandler.SendCardButtonAsync(query);
                     break;
             }
         }
