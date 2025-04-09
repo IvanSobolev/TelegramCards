@@ -66,7 +66,9 @@ class Program
                 case ("card"):
                     await _commandHandler.GetAnotherCardButtonAsync(query);
                     break;
-                
+                case ("exit"):
+                    await _commandHandler.ExitSliderButtonAsync(query);
+                    break;
             }
         }
     }
