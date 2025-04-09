@@ -107,7 +107,7 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
                 photo: InputFile.FromStream(stream, "card.png"),
                 caption: $"Вот ваша новая карточка!\nОчки: {card.Points}"
             );
-            _userGeneratorDate[msg.Chat.Id] = DateTime.Now;
+            _userGeneratorDate[msg.Chat.Id] = DateTime.UtcNow;
         }
         catch (Exception ex)
         {
@@ -153,15 +153,6 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
     {
         Message msg = query.Message!;
         await bot.DeleteMessage(msg.Chat.Id, msg.MessageId);
-        int newIndex = int.Parse(query.Data!.Split('_')[1], CultureInfo.InvariantCulture);
-        AllUserCardDto cardDto = await _cardRepository.GetAllUserCardAsync(msg.Chat.Id, newIndex, 1);
-        if (cardDto.Cards.Count < 1 || cardDto.PageCount == 0)
-        {
-            await bot.SendMessage(msg.Chat.Id, "У вас нет этой карты");
-            return;
-        }
-
-        await SendCardAsync(query.Message!.Chat.Id, cardDto.Cards.First(), newIndex, cardDto.PageCount);
     }
     
     public async Task SendCardAsync(long chatId, CardOutputDto card, int page, int lastPage)
