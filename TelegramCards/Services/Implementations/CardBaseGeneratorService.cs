@@ -43,6 +43,7 @@ public class CardBaseGeneratorService(IServiceScopeFactory scopeFactory, int gen
         return new CardOutputDto
         {
             CardBaseId = card.Id,
+            RarityLevel = card.RarityLevel,
             CardPhotoUrl = card.CardPhotoUrl,
             Points = card.Points
         };
