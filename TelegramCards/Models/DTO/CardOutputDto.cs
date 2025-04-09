@@ -7,8 +7,9 @@ public class CardOutputDto
 {
     public long Id { get; set; }
     public long OwnerId { get; set; }
-
+    
     public int CardBaseId { get; set; }
+    public Rarity RarityLevel { get; set; }
     public string CardPhotoUrl { get; set; }
     public int Points { get; set; }
 
