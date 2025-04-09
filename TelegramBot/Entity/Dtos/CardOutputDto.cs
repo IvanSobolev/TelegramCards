@@ -1,4 +1,6 @@
-﻿namespace TelegramBot.Entity.Dtos;
+﻿using TelegramCards.Models.Enum;
+
+namespace TelegramBot.Entity.Dtos;
 
 public class CardOutputDto
 {
@@ -6,6 +8,7 @@ public class CardOutputDto
     public long OwnerId { get; set; }
 
     public int CardBaseId { get; set; }
+    public Rarity RarityLevel { get; set; }
     public string CardPhotoUrl { get; set; }
     public int Points { get; set; }
 
