@@ -18,7 +18,6 @@ if (File.Exists(minioSecretsPath))
 }
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();
 
 builder.Services.AddScoped<IUserRepository, EfCoreUserRepository>();
@@ -45,11 +44,6 @@ builder.Services.AddDbContext<DataContext>(options =>
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
 
 
 app.UseHttpsRedirection();
