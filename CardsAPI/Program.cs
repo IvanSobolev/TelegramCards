@@ -63,4 +63,34 @@ using (var scope = app.Services.CreateScope())
     dbContext.Database.EnsureCreated();
 }
 
-app.Run();
+app.Use(async (context, next) =>
+{
+    var remoteIp = context.Connection.RemoteIpAddress;
+    var allowedIpPrefix = "192.168."; // локальная сеть
+    if (remoteIp == null || !remoteIp.ToString().StartsWith(allowedIpPrefix))
+    {
+        context.Response.StatusCode = 403;
+        await context.Response.WriteAsync("Access denied.");
+        return;
+    }
+
+    await next.Invoke();
+});
+app.UseWhen(context => context.Request.Path.StartsWithSegments("/swagger"), subApp =>
+{
+    subApp.Use(async (context, next) =>
+    {
+        var remoteIp = context.Connection.RemoteIpAddress;
+        if (remoteIp == null || !remoteIp.ToString().StartsWith("192.168."))
+        {
+            context.Response.StatusCode = 403;
+            await context.Response.WriteAsync("Swagger is not available from your IP.");
+            return;
+        }
+
+        await next.Invoke();
+    });
+});
+
+
+app.Run("http://0.0.0.0:5000");
