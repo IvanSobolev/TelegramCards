@@ -9,6 +9,8 @@ using TelegramCards.Services.interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddSwaggerGen();
+
 builder.Configuration.AddJsonFile("appsettings.json");
 
 var minioSecretsPath = Path.Combine(Directory.GetCurrentDirectory(), "secrets_config.json");
@@ -45,6 +47,11 @@ builder.Services.AddDbContext<DataContext>(options =>
 var app = builder.Build();
 
 
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 app.UseHttpsRedirection();
 app.UseRouting();
