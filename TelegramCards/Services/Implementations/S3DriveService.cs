@@ -3,23 +3,28 @@ using Amazon.S3.Model;
 using TelegramCards.Services.interfaces;
 
 namespace TelegramCards.Services.Implementations;
-public class R2DriveService : IFileDriveService
+public class S3DriveService : IFileDriveService
 {
     private readonly IAmazonS3 _s3Client;
-    private readonly string _buckerName;
+    private readonly string _bucketName;
     private readonly string _publicUrl;
 
-    public R2DriveService(IConfiguration config)
+    public S3DriveService(IConfiguration config)
     {
-        _buckerName = config["R2:BucketName"];
-        _publicUrl = config["R2:PublicUrl"] ?? $"https://{config["R2:AccountId"]}.r2.cloudflarestorage.com/{_buckerName}";
+        _bucketName = config["S3:BucketName"];
+        _publicUrl = config["S3:PublicUrl"] ?? 
+                     $"http://{config["S3:Endpoint"]}/{_bucketName}";
         var s3Config = new AmazonS3Config
         {
-            ServiceURL = $"https://{config["R2:AccountId"]}.r2.cloudflarestorage.com",
+            ServiceURL = $"http://{config["S3:Endpoint"]}",
             ForcePathStyle = true,
+            UseHttp = true
         };
 
-        _s3Client = new AmazonS3Client(config["R2:AccessKey"], config["R2:SecretKey"], s3Config);
+        _s3Client = new AmazonS3Client(
+            config["S3:AccessKey"], 
+            config["S3:SecretKey"], 
+            s3Config);
     }
 
     public async Task<string> UploadFileToDrive(IFormFile file)
@@ -31,7 +36,7 @@ public class R2DriveService : IFileDriveService
             {
                 var request = new PutObjectRequest
                 {
-                    BucketName = _buckerName,
+                    BucketName = _bucketName,
                     Key = filename,
                     InputStream = stream,
                     ContentType = file.ContentType,
@@ -61,7 +66,7 @@ public class R2DriveService : IFileDriveService
         if (Array.IndexOf(allowedExtensions, fileExtension) == -1)
             return false;
 
-        var allowedMimeTypes = new[] { "image/jpeg", "image/png", "image/gif" };
+        var allowedMimeTypes = new[] { "image/png"};
         if (Array.IndexOf(allowedMimeTypes, file.ContentType) == -1)
             return false;
 

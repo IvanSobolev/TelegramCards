@@ -9,6 +9,14 @@ using TelegramCards.Services.interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Configuration.AddJsonFile("appsettings.json");
+
+var minioSecretsPath = Path.Combine(Directory.GetCurrentDirectory(), "secrets_config.json");
+if (File.Exists(minioSecretsPath))
+{
+    builder.Configuration.AddJsonFile(minioSecretsPath, optional: true);
+}
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();
@@ -21,7 +29,7 @@ builder.Services.AddScoped<IUserManager, UserManager>();
 builder.Services.AddScoped<ICardManager, CardManager>();
 builder.Services.AddScoped<ICardBaseManager, CardBaseManager>();
 
-builder.Services.AddScoped<IFileDriveService, GoogleDriveService>();
+builder.Services.AddSingleton<IFileDriveService, S3DriveService>();
 builder.Services.AddSingleton<ICardBaseGeneratorService, CardBaseGeneratorService>(provider => 
 {
     var scopeFactory = provider.GetRequiredService<IServiceScopeFactory>();
