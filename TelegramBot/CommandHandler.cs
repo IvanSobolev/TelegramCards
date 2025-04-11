@@ -2,6 +2,7 @@
 using System.Globalization;
 using Telegram.Bot;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 using TelegramBot.ApiRepository.Interfaces;
 using TelegramBot.Entity.Dtos;
@@ -96,7 +97,7 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
             await bot.SendMessage(msg.Chat.Id, "Что-то пошло не так. Напишите /start для синхронизации данных.", replyMarkup: new ReplyKeyboardRemove());
             return;
         }
-        
+        string name = card.Creator == null? card.Name : $"*{card.Creator}* - {card.Name}";
         try
         {
             using var httpClient = new HttpClient();
@@ -106,7 +107,8 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
             await _bot.SendPhoto(
                 chatId: msg.Chat.Id,
                 photo: InputFile.FromStream(stream, "card.png"),
-                caption: $"Вот ваша новая карточка!\nРедкость: {card.RarityLevel.ToString()}\nОчки: {card.Points}"
+                caption: $"Вот ваша новая карточка!\n{name}\nРедкость: {card.RarityLevel.ToString()}\nОчки: {card.Points}",
+                parseMode: ParseMode.Markdown
             );
             _userGeneratorDate[msg.Chat.Id] = DateTime.UtcNow;
         }
@@ -115,7 +117,8 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
             Console.WriteLine($"Error sending photo: {ex.Message}");
             await _bot.SendMessage(
                 chatId: msg.Chat.Id,
-                text: $"Вот ваша новая карточка!\nОчки: {card.Points}.\n(К сожалению, с картинкой, что-то пошло не так)"
+                text: $"Вот ваша новая карточка!\n{name}\nОчки: {card.Points}.\n(К сожалению, с картинкой, что-то пошло не так)",
+                parseMode: ParseMode.Markdown
             );
         }
     }
@@ -151,6 +154,7 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
             var card = await _cardRepository.SendCardAsync(lastTry);
             await bot.SendMessage(msg.Chat.Id,
                 $"Ваша карта отправлена пользователю @{user.Username}");
+            string name = card.Creator == null? card.Name : $"*{card.Creator}* - {card.Name}";
             try
             {
                 using var httpClient = new HttpClient();
@@ -160,7 +164,8 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
                 await _bot.SendPhoto(
                     chatId: user.TelegramId,
                     photo: InputFile.FromStream(stream, "card.png"),
-                    caption: $"Пользователь @{msg.From!.Username} отправил вам карту #{card.CardBaseId}\nРедкость: {card.RarityLevel.ToString()}\nОчки: {card.Points}\nСоздана {card.GenerationDate:dd/MM/yyyy}"
+                    caption: $"Пользователь @{msg.From!.Username} отправил вам карту `#{card.CardBaseId}`\n{name}\nРедкость: {card.RarityLevel.ToString()}\nОчки: {card.Points}\nСоздана {card.GenerationDate:dd/MM/yyyy}",
+                    parseMode: ParseMode.Markdown
                 );
             }
             catch (Exception ex)
@@ -168,7 +173,8 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
                 Console.WriteLine($"Error sending photo: {ex.Message}");
                 await _bot.SendMessage(
                     chatId: user.TelegramId,
-                    text: $"Пользователь @{msg.From!.Username} отправил вам карту #{card.CardBaseId}\nРедкость: {card.RarityLevel.ToString()}\nОчки: {card.Points}\nСоздана {card.GenerationDate:dd/MM/yyyy}\n(К сожалению, с картинкой, что-то пошло не так)"
+                    text: $"Пользователь @{msg.From!.Username} отправил вам карту `#{card.CardBaseId}`\n{name}\nРедкость: {card.RarityLevel.ToString()}\nОчки: {card.Points}\nСоздана {card.GenerationDate:dd/MM/yyyy}\n(К сожалению, с картинкой, что-то пошло не так)",
+                    parseMode: ParseMode.Markdown
                 );
             }
         }
@@ -248,6 +254,7 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
         });
 
         var inlineKeyboard = new InlineKeyboardMarkup(buttons);
+        string name = card.Creator == null? card.Name : $"*{card.Creator}* - {card.Name}";
         
         try
         {
@@ -258,8 +265,9 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
             await _bot.SendPhoto(
                 chatId: chatId,
                 photo: InputFile.FromStream(stream, "card.png"),
-                caption: $"Карта #{card.CardBaseId}\nРедкость: {card.RarityLevel.ToString()}\nОчки: {card.Points}\nСоздана {card.GenerationDate:dd/MM/yyyy}",
-                replyMarkup: inlineKeyboard
+                caption: $"Карта `#{card.CardBaseId}`\n{name}\nРедкость: {card.RarityLevel.ToString()}\nОчки: {card.Points}\nСоздана {card.GenerationDate:dd/MM/yyyy}",
+                replyMarkup: inlineKeyboard,
+                parseMode: ParseMode.Markdown
             );
         }
         catch (Exception ex)
@@ -267,8 +275,9 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
             Console.WriteLine($"Error sending photo: {ex.Message}");
             await _bot.SendMessage(
                 chatId: chatId,
-                text: $"Карта #{card.CardBaseId}\nРедкость: {card.RarityLevel.ToString()}\nОчки: {card.Points}\nСоздана {card.GenerationDate:dd/MM/yyyy}\n(К сожалению, с картинкой, что-то пошло не так)",
-                replyMarkup: inlineKeyboard
+                text: $"Карта `#{card.CardBaseId}`\n{name}\nРедкость: {card.RarityLevel.ToString()}\nОчки: {card.Points}\nСоздана {card.GenerationDate:dd/MM/yyyy}\n(К сожалению, с картинкой, что-то пошло не так)",
+                replyMarkup: inlineKeyboard,
+                parseMode: ParseMode.Markdown
             );
         }
     }

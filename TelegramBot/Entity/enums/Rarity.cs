@@ -2,8 +2,8 @@
 
 public enum Rarity
 {
-    Base,
-    Rare,
-    Epic,
-    Legendary
+    Wood,
+    Iron,
+    Gold,
+    Diamonds
 }
