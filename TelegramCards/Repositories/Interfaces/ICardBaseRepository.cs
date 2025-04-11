@@ -13,8 +13,10 @@ public interface ICardBaseRepository
     /// <param name="rarity">Редкость новой карты</param>
     /// <param name="photoUrl">Ссылка на фотографию карты</param>
     /// <param name="pointsNumber">Число очков, которое дает карта</param>
+    /// <param name="name">Название для новой карточки</param>
+    /// <param name="creator">Создатель контента на карточке</param>
     /// <returns>Созданная индивидуальная карта</returns>
-    Task<CardBase?> AddNewCardBaseAsync(long adminId, Rarity rarity, string photoUrl, int pointsNumber);
+    Task<CardBase?> AddNewCardBaseAsync(long adminId, Rarity rarity, string photoUrl, int pointsNumber, string name, string? creator = null);
     
     /// <summary>
     /// Получить все индивидуальные карты с разделением на страницы

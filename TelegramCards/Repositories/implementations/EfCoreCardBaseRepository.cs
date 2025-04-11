@@ -12,14 +12,14 @@ public class EfCoreCardBaseRepository (DataContext dataContext) : ICardBaseRepos
     private readonly DataContext _dataContext = dataContext;
     
     /// <inheritdoc/>
-    public async Task<CardBase?> AddNewCardBaseAsync(long adminId, Rarity rarity, string photoUrl, int pointsNumber)
+    public async Task<CardBase?> AddNewCardBaseAsync(long adminId, Rarity rarity, string photoUrl, int pointsNumber, string name, string? creator = null)
     {
         User? user = await _dataContext.Users.FirstOrDefaultAsync(u => u.TelegramId == adminId);
         if (user == null || user.Role != Roles.Admin)
         {
             return null;
         }
-        CardBase newCardBase = new CardBase { RarityLevel = rarity, CardPhotoUrl = photoUrl, Points = pointsNumber };
+        CardBase newCardBase = new CardBase { RarityLevel = rarity, CardPhotoUrl = photoUrl, Points = pointsNumber, Name = name, Creator = creator};
 
         _dataContext.CardBases.Add(newCardBase);
         await _dataContext.SaveChangesAsync();
@@ -43,6 +43,8 @@ public class EfCoreCardBaseRepository (DataContext dataContext) : ICardBaseRepos
         var query = _dataContext.CardBases.Select(cb => new CardBaseOutputDto()
                                                                 {
                                                                     Id = cb.Id,
+                                                                    Name = cb.Name,
+                                                                    Creator = cb.Creator,
                                                                     RarityLevel = cb.RarityLevel,
                                                                     CardPhotoUrl = cb.CardPhotoUrl,
                                                                     Points = cb.Points
