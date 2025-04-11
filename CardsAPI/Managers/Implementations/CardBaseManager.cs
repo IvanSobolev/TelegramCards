@@ -23,7 +23,7 @@ public class CardBaseManager (ICardBaseRepository cardBaseRepository, IFileDrive
         string fileUrl = await _fileDrive.UploadFileToDrive(cardBaseDto.File);
         
         CardBase? cardBase = await _cardBaseRepository.AddNewCardBaseAsync(cardBaseDto.AdminId, cardBaseDto.Rarity,
-            fileUrl, cardBaseDto.PointsNumber);
+            fileUrl, cardBaseDto.PointsNumber, cardBaseDto.Name, cardBaseDto.Creator);
 
         if (cardBase == null)
         {

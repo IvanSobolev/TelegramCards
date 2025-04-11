@@ -8,4 +8,6 @@ public class AddCardBaseDto
     public Rarity Rarity{ get; set; } 
     public IFormFile File { get; set; } 
     public int PointsNumber{ get; set; }
+    public string Name { get; set; }
+    public string? Creator { get; set; }
 }
