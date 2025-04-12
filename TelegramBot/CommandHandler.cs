@@ -6,6 +6,7 @@ using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 using TelegramBot.ApiRepository.Interfaces;
 using TelegramBot.Entity.Dtos;
+using TelegramCards.Models.Enum;
 using Exception = System.Exception;
 
 namespace TelegramBot;
@@ -15,9 +16,9 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
     private readonly TelegramBotClient _bot = bot;
     private readonly ICardRepository _cardRepository = cardRepository;
     private readonly IUserRepository _userRepository = userRepository;
-    private readonly Dictionary<long, DateTime> _userGeneratorDate = new Dictionary<long, DateTime>(); 
-    private readonly Dictionary<long, SendCardDto> _userStarSendCard = new Dictionary<long, SendCardDto>(); 
-    
+    private readonly Dictionary<long, DateTime> _userGeneratorDate = new Dictionary<long, DateTime>();
+    private readonly Dictionary<long, SendCardDto> _userStarSendCard = new Dictionary<long, SendCardDto>();
+
     ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup(new[]
     {
         new KeyboardButton[] { "💎 Получить карту", "🧊 Посмотреть карты" }
@@ -33,7 +34,11 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
         {
             if (msg.Chat.Username == null)
             {
-                await bot.SendMessage(msg.Chat.Id, "Для использования бота, у вас должен быть username.", replyMarkup: new ReplyKeyboardRemove());
+                await bot.SendMessage(chatId: msg.Chat.Id,
+                    text:
+                    "🚫 *Для использования бота у вас должен быть username!*\n\nПожалуйста, установите username в настройках Telegram и попробуйте снова.",
+                    parseMode: ParseMode.Markdown,
+                    replyMarkup: new ReplyKeyboardRemove());
                 return;
             }
 
@@ -42,51 +47,65 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
 
             if (user == null)
             {
-                await bot.SendMessage(msg.Chat.Id, "Ошибка. Попробуйте написать /start позже.", replyMarkup: new ReplyKeyboardRemove());
+                await bot.SendMessage(chatId: msg.Chat.Id,
+                    text: "⚠️ *Ошибка при регистрации!*\n\nПопробуйте написать /start позже.",
+                    parseMode: ParseMode.Markdown,
+                    replyMarkup: new ReplyKeyboardRemove());
                 return;
             }
         }
+
         if (user.Username != msg.Chat.Username && msg.Chat.Username != null)
         {
             await _userRepository.EditUsernameAsync(msg.Chat.Id, msg.Chat.Username);
         }
-        
+
         _userGeneratorDate[msg.Chat.Id] = user.LastTakeCard;
 
         var lastGeneration = _userGeneratorDate[msg.Chat.Id];
-        
+
         var nextAvailableTime = lastGeneration.AddHours(4);
 
-        string nextCardText = "";
-        
-        if (DateTime.UtcNow >= nextAvailableTime)
-        {
-            nextCardText = "Вы можете получить карточку прямо сейчас!";
-        }
-        else
-        {
-            var timeLeft = nextAvailableTime - DateTime.UtcNow;
-            nextCardText = $"Следующую карточку можно будет получить через {timeLeft:h\\:mm} (час:минута)";
-        }
-        
-        
-        await bot.SendMessage(msg.Chat.Id, 
-            $"Привет, это бот для коллекционирования карточек.\n{nextCardText}", 
-                replyMarkup: replyMarkup);
+        string nextCardText = DateTime.UtcNow >= nextAvailableTime
+            ? "🎉 *Вы можете получить карточку прямо сейчас!*"
+            : $"⏳ Следующую карточку можно будет получить через *{nextAvailableTime - DateTime.UtcNow:h\\:mm}* (час:минута)";
+
+
+        await bot.SendMessage(chatId: msg.Chat.Id,
+            text: $"""
+                   🃏 *Добро пожаловать в Mine Cards bot!*
+
+                   Здесь вы можете собирать уникальные карточки, по разному контенту в игре майнкрафт, обмениваться ими с друзьями и соревноваться за топовые места!
+
+                   {nextCardText}
+
+                   *Доступные команды:*
+                   /start - Начать игру (синхронизировать данные).
+                   `💎 Получить карту` - Получить новую карточку.
+                   `🧊 Посмотреть карты` - Посмотреть все свои карточки.
+                   """,
+            parseMode: ParseMode.Markdown,
+            replyMarkup: replyMarkup);
     }
 
     public async Task GenerateCardCommand(Message msg)
     {
-        if(!_userGeneratorDate.TryGetValue(msg.Chat.Id, out var lastGeneration))
+        if (!_userGeneratorDate.TryGetValue(msg.Chat.Id, out var lastGeneration))
         {
-            await bot.SendMessage(msg.Chat.Id, "Что-то пошло не так. Напишите /start для синхронизации данных.", replyMarkup: new ReplyKeyboardRemove());
+            await bot.SendMessage(chatId: msg.Chat.Id,
+                text: "🔴 *Ошибка синхронизации!*\n\nНапишите /start для обновления данных.",
+                parseMode: ParseMode.Markdown,
+                replyMarkup: new ReplyKeyboardRemove());
             return;
         }
 
         if (DateTime.UtcNow < lastGeneration.AddHours(4))
         {
             var timeLeft = lastGeneration.AddHours(4) - DateTime.UtcNow;
-            await bot.SendMessage(msg.Chat.Id, $"Вы можете получить карту только через {timeLeft:h\\:mm} (час:минута)");
+            await bot.SendMessage(chatId: msg.Chat.Id,
+                text:
+                $"⏳ *Карта еще не готова!*\n\nВы сможете получить следующую карту через *{timeLeft:h\\:mm}* (час:минута)\n\nПопробуйте позже!",
+                parseMode: ParseMode.Markdown);
             return;
         }
 
@@ -94,20 +113,33 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
 
         if (card == null)
         {
-            await bot.SendMessage(msg.Chat.Id, "Что-то пошло не так. Напишите /start для синхронизации данных.", replyMarkup: new ReplyKeyboardRemove());
+            await bot.SendMessage(chatId: msg.Chat.Id,
+                text: "🔴 *Ошибка генерации карты!*\n\nПопробуйте снова через несколько минут.",
+                parseMode: ParseMode.Markdown);
             return;
         }
-        string name = card.Creator == null? card.Name : $"*{card.Creator}* - {card.Name}";
+
+        string name = card.Creator == null ? $"*{card.Name}*" : $"*{card.Creator}* - {card.Name}";
+
+        string rarityEmoji = GetRarityEmoji(card.RarityLevel);
         try
         {
             using var httpClient = new HttpClient();
             byte[] imageBytes = await httpClient.GetByteArrayAsync(card.CardPhotoUrl);
-            
+
             using var stream = new MemoryStream(imageBytes);
             await _bot.SendPhoto(
                 chatId: msg.Chat.Id,
                 photo: InputFile.FromStream(stream, "card.png"),
-                caption: $"Вот ваша новая карточка!\n{name}\nРедкость: {card.RarityLevel.ToString()}\nОчки: {card.Points}",
+                caption: $"""
+                          🎊 *Новая карта добавлена в вашу коллекцию!*
+
+                          {name}
+                          {rarityEmoji} Редкость: *{card.RarityLevel}*
+                          ⭐ Очки: *{card.Points}*
+
+                          Продолжайте собирать свою коллекцию!
+                          """,
                 parseMode: ParseMode.Markdown
             );
             _userGeneratorDate[msg.Chat.Id] = DateTime.UtcNow;
@@ -117,7 +149,15 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
             Console.WriteLine($"Error sending photo: {ex.Message}");
             await _bot.SendMessage(
                 chatId: msg.Chat.Id,
-                text: $"Вот ваша новая карточка!\n{name}\nОчки: {card.Points}.\n(К сожалению, с картинкой, что-то пошло не так)",
+                text: $"""
+                       🎊 *Новая карта добавлена в вашу коллекцию!*
+
+                       {name}
+                       {rarityEmoji} Редкость: *{card.RarityLevel}*
+                       ⭐ Очки: *{card.Points}*
+
+                       🖼 *Изображение временно недоступно*
+                       """,
                 parseMode: ParseMode.Markdown
             );
         }
@@ -128,11 +168,14 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
         AllUserCardDto cardDto = await _cardRepository.GetAllUserCardAsync(msg.Chat.Id, 1, 1);
         if (cardDto.Cards.Count < 1 || cardDto.PageCount == 0)
         {
-            await bot.SendMessage(msg.Chat.Id, "У вас еще нет карт.");
+            await bot.SendMessage(chatId: msg.Chat.Id,
+                text:
+                "📭 *Ваша коллекция пуста!*\n\nИспользуйте кнопку \"✨ Получить карту\" чтобы добавить первую карту в коллекцию.",
+                parseMode: ParseMode.Markdown);
             return;
         }
-        
-        
+
+
         var card = cardDto.Cards.First();
 
         await SendCardAsync(msg.Chat.Id, card, 1, cardDto.PageCount);
@@ -145,26 +188,47 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
             var user = await _userRepository.GetUserByUsernameAsync(msg.Text!.Split('@')[1]);
             if (user == null)
             {
-                await bot.SendMessage(msg.Chat.Id,
-                    "Пользователь не найден, попробуйте кого-то другого\n(Если пользователя нет в игре, или он менял username попроси написать /start в бота)",
-                    replyMarkup: new InlineKeyboardMarkup(new[]{InlineKeyboardButton.WithCallbackData("❌Отмена отправки карты", $"exit")}));
+                await bot.SendMessage(chatId: msg.Chat.Id,
+                    text: """
+                          🔍 *Пользователь не найден!*
+
+                          Проверьте правильность написания username:
+                          - Пользователь должен быть зарегистрирован в боте
+                          - Username должен быть актуальным
+
+                          Попробуйте снова или отмените отправку.
+                          """,
+                    replyMarkup: new InlineKeyboardMarkup(new[]
+                        { InlineKeyboardButton.WithCallbackData("❌Отмена отправки карты", $"exit") }));
             }
 
             lastTry.NewOwnerId = user.TelegramId;
             var card = await _cardRepository.SendCardAsync(lastTry);
-            await bot.SendMessage(msg.Chat.Id,
-                $"Ваша карта отправлена пользователю @{user.Username}");
-            string name = card.Creator == null? card.Name : $"*{card.Creator}* - {card.Name}";
+            await bot.SendMessage(chatId: msg.Chat.Id,
+                text: $"✅ *Карта успешно отправлена!* @{user.Username}",
+                parseMode: ParseMode.Markdown);
+            string name = card.Creator == null ? $"*{card.Name}*" : $"*{card.Creator}* - {card.Name}";
+            string rarityEmoji = GetRarityEmoji(card.RarityLevel);
             try
             {
                 using var httpClient = new HttpClient();
                 byte[] imageBytes = await httpClient.GetByteArrayAsync(card.CardPhotoUrl);
-            
+
                 using var stream = new MemoryStream(imageBytes);
                 await _bot.SendPhoto(
                     chatId: user.TelegramId,
                     photo: InputFile.FromStream(stream, "card.png"),
-                    caption: $"Пользователь @{msg.From!.Username} отправил вам карту `#{card.CardBaseId}`\n{name}\nРедкость: {card.RarityLevel.ToString()}\nОчки: {card.Points}\nСоздана {card.GenerationDate:dd/MM/yyyy}",
+                    caption: $"""
+                              ✉️ *Вы получили новую карту!*
+
+                              От: @{msg.From!.Username}
+                              Карта #{card.CardBaseId}
+
+                              {name}
+                              {rarityEmoji} Редкость: *{card.RarityLevel}*
+                              ⭐ Очки: *{card.Points}*
+                              🗓 Создана: *{card.GenerationDate:dd.MM.yyyy}*
+                              """,
                     parseMode: ParseMode.Markdown
                 );
             }
@@ -173,7 +237,19 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
                 Console.WriteLine($"Error sending photo: {ex.Message}");
                 await _bot.SendMessage(
                     chatId: user.TelegramId,
-                    text: $"Пользователь @{msg.From!.Username} отправил вам карту `#{card.CardBaseId}`\n{name}\nРедкость: {card.RarityLevel.ToString()}\nОчки: {card.Points}\nСоздана {card.GenerationDate:dd/MM/yyyy}\n(К сожалению, с картинкой, что-то пошло не так)",
+                    text: $"""
+                           ✉️ *Вы получили новую карту!*
+
+                           От: @{msg.From!.Username}
+                           Карта #{card.CardBaseId}
+
+                           {name}
+                           {rarityEmoji} Редкость: *{card.RarityLevel}*
+                           ⭐ Очки: *{card.Points}*
+                           🗓 Создана: *{card.GenerationDate:dd.MM.yyyy}*
+
+                           🖼 *Изображение временно недоступно*
+                           """,
                     parseMode: ParseMode.Markdown
                 );
             }
@@ -188,18 +264,25 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
         AllUserCardDto cardDto = await _cardRepository.GetAllUserCardAsync(msg.Chat.Id, newIndex, 1);
         if (cardDto.Cards.Count < 1 || cardDto.PageCount == 0)
         {
-            await bot.SendMessage(msg.Chat.Id, "У вас нет этой карты");
+            await bot.SendMessage(chatId: msg.Chat.Id,
+                text: "🔍 *Карта не найдена!*\n\nВозможно, она была удалена или передана другому игроку.",
+                parseMode: ParseMode.Markdown);
             return;
         }
 
         await SendCardAsync(query.Message!.Chat.Id, cardDto.Cards.First(), newIndex, cardDto.PageCount);
     }
-    
+
     public async Task ExitSliderButtonAsync(CallbackQuery query)
     {
         Message msg = query.Message!;
         _userStarSendCard.Remove(query.From.Id);
         await bot.DeleteMessage(query.From.Id, msg.MessageId);
+        await _bot.SendMessage(
+            chatId: query.From.Id,
+            text: "👋 *Просмотр коллекции завершен!*",
+            parseMode: ParseMode.Markdown,
+            replyMarkup: replyMarkup);
     }
 
     public async Task SendCardButtonAsync(CallbackQuery query)
@@ -207,65 +290,89 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
         Message msg = query.Message!;
         await bot.DeleteMessage(msg.Chat.Id, msg.MessageId);
         int cardId = int.Parse(query.Data!.Split('_')[1], CultureInfo.InvariantCulture);
-        await bot.SendMessage(query.From.Id,
-            "Отправь @username пользователя, которому хочешь отправить эту карту\n(Если пользователя нет в игре, или он менял username попроси написать /start в бота)\nПример: @example",
-            replyMarkup: new InlineKeyboardMarkup(new[]{InlineKeyboardButton.WithCallbackData("❌Отмена отправки карты", $"exit")}));
-        _userStarSendCard.Add(query.From.Id, new SendCardDto{SenderId = query.From.Id, CardId = cardId, NewOwnerId = 0});
+        await bot.SendMessage(chatId: query.From.Id,
+            text: """
+                  📤 *Отправка карты*
+
+                  Введите @username игрока, которому хотите передать карту.
+
+                  Пример:
+                  @username_player
+
+                  ❗ Учтите:
+                  1. Отправка необратима
+                  2. Игрок должен быть зарегистрирован в боте
+                  3. Проверьте правильность username
+                  """,
+            parseMode: ParseMode.Markdown,
+            replyMarkup: new InlineKeyboardMarkup(new[]
+                { InlineKeyboardButton.WithCallbackData("❌Отмена отправки карты", $"exit") }));
+        _userStarSendCard.Add(query.From.Id,
+            new SendCardDto { SenderId = query.From.Id, CardId = cardId, NewOwnerId = 0 });
     }
-    
+
     public async Task SendCardAsync(long chatId, CardOutputDto card, int page, int lastPage)
     {
         var buttons = new List<InlineKeyboardButton[]>();
-    
+
         var navButtons = new List<InlineKeyboardButton>();
-    
+
         if (lastPage > 3 && page > 3)
         {
-            navButtons.Add(InlineKeyboardButton.WithCallbackData("<< Первая", $"card_1"));
-        }
-        
-        if (page > 1)
-        {
-            navButtons.Add(InlineKeyboardButton.WithCallbackData("< Назад", $"card_{page - 1}"));
+            navButtons.Add(InlineKeyboardButton.WithCallbackData("⏪ Первая", $"card_1"));
         }
 
-        navButtons.Add(InlineKeyboardButton.WithCallbackData($"{page}/{lastPage}", "zero"));
+        if (page > 1)
+        {
+            navButtons.Add(InlineKeyboardButton.WithCallbackData("◀️ Назад", $"card_{page - 1}"));
+        }
+
+        navButtons.Add(InlineKeyboardButton.WithCallbackData($"📌 {page}/{lastPage}", "zero"));
 
         if (page < lastPage)
         {
-            navButtons.Add(InlineKeyboardButton.WithCallbackData("Вперёд >", $"card_{page + 1}"));
+            navButtons.Add(InlineKeyboardButton.WithCallbackData("Вперёд ▶️", $"card_{page + 1}"));
         }
-        
+
         if (page < lastPage - 2 && lastPage > 3)
         {
-            navButtons.Add(InlineKeyboardButton.WithCallbackData("Последняя >>", $"card_{lastPage}"));
+            navButtons.Add(InlineKeyboardButton.WithCallbackData("Последняя ⏩", $"card_{lastPage}"));
         }
-    
+
         buttons.Add(navButtons.ToArray());
-        
+
         buttons.Add(new[]
         {
-            InlineKeyboardButton.WithCallbackData("📻Отправить карту игроку", $"send_{card.Id}")
+            InlineKeyboardButton.WithCallbackData("🎁 Отправить карту", $"send_{card.Id}")
         });
-        
+
         buttons.Add(new[]
         {
-            InlineKeyboardButton.WithCallbackData("🍕 Выйти", "exit")
+            InlineKeyboardButton.WithCallbackData("🚪 Выход", "exit")
         });
 
         var inlineKeyboard = new InlineKeyboardMarkup(buttons);
-        string name = card.Creator == null? card.Name : $"*{card.Creator}* - {card.Name}";
-        
+        string name = card.Creator == null ? $"*{card.Name}*" : $"*{card.Creator}* - {card.Name}";
+        string rarityEmoji = GetRarityEmoji(card.RarityLevel);
         try
         {
             using var httpClient = new HttpClient();
             byte[] imageBytes = await httpClient.GetByteArrayAsync(card.CardPhotoUrl);
-            
+
             using var stream = new MemoryStream(imageBytes);
             await _bot.SendPhoto(
                 chatId: chatId,
                 photo: InputFile.FromStream(stream, "card.png"),
-                caption: $"Карта `#{card.CardBaseId}`\n{name}\nРедкость: {card.RarityLevel.ToString()}\nОчки: {card.Points}\nСоздана {card.GenerationDate:dd/MM/yyyy}",
+                caption: $"""
+                          🃏 *Карта #{card.CardBaseId}*
+
+                          {name}
+                          {rarityEmoji} Редкость: *{card.RarityLevel}*
+                          ⭐ Очки: *{card.Points}*
+                          🗓 Создана: *{card.GenerationDate:dd.MM.yyyy}*
+
+                          📖 Страница: {page}/{lastPage}
+                          """,
                 replyMarkup: inlineKeyboard,
                 parseMode: ParseMode.Markdown
             );
@@ -275,11 +382,33 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
             Console.WriteLine($"Error sending photo: {ex.Message}");
             await _bot.SendMessage(
                 chatId: chatId,
-                text: $"Карта `#{card.CardBaseId}`\n{name}\nРедкость: {card.RarityLevel.ToString()}\nОчки: {card.Points}\nСоздана {card.GenerationDate:dd/MM/yyyy}\n(К сожалению, с картинкой, что-то пошло не так)",
+                text: $"""
+                       🃏 *Карта #{card.CardBaseId}*
+
+                       {name}
+                       {rarityEmoji} Редкость: *{card.RarityLevel}*
+                       ⭐ Очки: *{card.Points}*
+                       🗓 Создана: *{card.GenerationDate:dd.MM.yyyy}*
+
+                       📖 Страница: {page}/{lastPage}
+
+                       🖼 *Изображение временно недоступно*
+                       """,
                 replyMarkup: inlineKeyboard,
                 parseMode: ParseMode.Markdown
             );
         }
+    }
+
+    private static string GetRarityEmoji(Rarity rarity)
+    {
+        return rarity switch
+        {
+            Rarity.Wood => "🪵",
+            Rarity.Iron => "🪨",
+            Rarity.Gold => "🪙",
+            Rarity.Diamonds => "💎"
+        };
     }
 
 }

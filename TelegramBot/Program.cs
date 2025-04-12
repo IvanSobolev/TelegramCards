@@ -23,8 +23,8 @@ class Program
         bot = new TelegramBotClient(File.ReadLines("../../../TOKEN.txt").First());
         var me = await bot.GetMe();
         _commandHandler = new CommandHandler(bot,
-            new RequestServiceCardRepository(new HttpClientRequestService(), "http://localhost:5052"),
-            new RequestServiceUserRepository(new HttpClientRequestService(), "http://localhost:5052"));
+            new RequestServiceCardRepository(new HttpClientRequestService(), "http://192.168.1.249:5000"),
+            new RequestServiceUserRepository(new HttpClientRequestService(), "http://192.168.1.249:5000"));
         
         bot.OnMessage += OnMessage;
         bot.OnUpdate += OnUpdate;
