@@ -203,7 +203,15 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
             }
 
             lastTry.NewOwnerId = user.TelegramId;
+            if(lastTry.NewOwnerId == 0 || lastTry.CardId == 0 || lastTry.SenderId == 0)
+            {
+                await bot.SendMessage(chatId: msg.Chat.Id,
+                text: $"Что-то пошло не так. Попробуйте еще раз.",
+                parseMode: ParseMode.Markdown);
+                return;
+            }
             var card = await _cardRepository.SendCardAsync(lastTry);
+            _userStarSendCard.Remove(query.From.Id);
             await bot.SendMessage(chatId: msg.Chat.Id,
                 text: $"✅ *Карта успешно отправлена!* @{user.Username}",
                 parseMode: ParseMode.Markdown);
@@ -253,6 +261,7 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
                     parseMode: ParseMode.Markdown
                 );
             }
+
         }
     }
 
