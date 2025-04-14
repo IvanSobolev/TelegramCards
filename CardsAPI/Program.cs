@@ -10,6 +10,8 @@ using TelegramCards.Services.interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddSwaggerGen();
+
 builder.Configuration.AddJsonFile("appsettings.json");
 
 var minioSecretsPath = Path.Combine(Directory.GetCurrentDirectory(), "secrets_config.json");
@@ -19,7 +21,6 @@ if (File.Exists(minioSecretsPath))
 }
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();
 
 builder.Services.AddScoped<IUserRepository, EfCoreUserRepository>();
@@ -54,12 +55,12 @@ builder.Services.AddDbContext<DataContext>(options =>
 
 var app = builder.Build();
 
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
 
 app.UseHttpsRedirection();
 app.UseRouting();
@@ -71,4 +72,34 @@ using (var scope = app.Services.CreateScope())
     dbContext.Database.EnsureCreated();
 }
 
-app.Run();
+app.Use(async (context, next) =>
+{
+    var remoteIp = context.Connection.RemoteIpAddress;
+    var allowedIpPrefix = "192.168."; // локальная сеть
+    if (remoteIp == null || !remoteIp.ToString().StartsWith(allowedIpPrefix))
+    {
+        context.Response.StatusCode = 403;
+        await context.Response.WriteAsync("Access denied.");
+        return;
+    }
+
+    await next.Invoke();
+});
+app.UseWhen(context => context.Request.Path.StartsWithSegments("/swagger"), subApp =>
+{
+    subApp.Use(async (context, next) =>
+    {
+        var remoteIp = context.Connection.RemoteIpAddress;
+        if (remoteIp == null || !remoteIp.ToString().StartsWith("192.168."))
+        {
+            context.Response.StatusCode = 403;
+            await context.Response.WriteAsync("Swagger is not available from your IP.");
+            return;
+        }
+
+        await next.Invoke();
+    });
+});
+
+
+app.Run("http://0.0.0.0:5000");
