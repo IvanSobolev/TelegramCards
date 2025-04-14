@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using TelegramCards.Managers.Implementations;
 using TelegramCards.Managers.Interfaces;
 using TelegramCards.Models;
+using TelegramCards.Models.DTO;
 using TelegramCards.Repositories.implementations;
 using TelegramCards.Repositories.Interfaces;
 using TelegramCards.Services.Implementations;
@@ -35,7 +36,15 @@ builder.Services.AddSingleton<ICardBaseGeneratorService, CardBaseGeneratorServic
 {
     var scopeFactory = provider.GetRequiredService<IServiceScopeFactory>();
     int stackSize = Convert.ToInt32(builder.Configuration.GetConnectionString("CardSettings:GenerateLengthStack"));
-    return new CardBaseGeneratorService(scopeFactory, stackSize);
+    var config = provider.GetRequiredService<IConfiguration>();
+    
+    var rarityConfig = builder.Configuration.GetSection("RarityDistribution");
+    var total = rarityConfig.GetChildren().Sum(x => x.Get<double>());
+    if (Math.Abs(total - 100.0) > 0.01)
+    {
+        throw new Exception("Rarity distribution must sum to 100%");
+    }
+    return new CardBaseGeneratorService(scopeFactory, stackSize, config);
 });
 
 
