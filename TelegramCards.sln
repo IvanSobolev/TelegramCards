@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelegramCards", "TelegramCards\TelegramCards.csproj", "{88A682AD-49F0-462A-A943-04E151B95E4E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CardsAPI", "CardsAPI\CardsAPI.csproj", "{88A682AD-49F0-462A-A943-04E151B95E4E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TelegramBot", "TelegramBot\TelegramBot.csproj", "{ECA79555-3051-4D31-9BD4-EFEC661C686D}"
 EndProject
