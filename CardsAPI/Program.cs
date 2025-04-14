@@ -2,12 +2,15 @@ using Microsoft.EntityFrameworkCore;
 using TelegramCards.Managers.Implementations;
 using TelegramCards.Managers.Interfaces;
 using TelegramCards.Models;
+using TelegramCards.Models.DTO;
 using TelegramCards.Repositories.implementations;
 using TelegramCards.Repositories.Interfaces;
 using TelegramCards.Services.Implementations;
 using TelegramCards.Services.interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddSwaggerGen();
 
 builder.Configuration.AddJsonFile("appsettings.json");
 
@@ -18,7 +21,6 @@ if (File.Exists(minioSecretsPath))
 }
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();
 
 builder.Services.AddScoped<IUserRepository, EfCoreUserRepository>();
@@ -34,7 +36,15 @@ builder.Services.AddSingleton<ICardBaseGeneratorService, CardBaseGeneratorServic
 {
     var scopeFactory = provider.GetRequiredService<IServiceScopeFactory>();
     int stackSize = Convert.ToInt32(builder.Configuration.GetConnectionString("CardSettings:GenerateLengthStack"));
-    return new CardBaseGeneratorService(scopeFactory, stackSize);
+    var config = provider.GetRequiredService<IConfiguration>();
+    
+    var rarityConfig = builder.Configuration.GetSection("RarityDistribution");
+    var total = rarityConfig.GetChildren().Sum(x => x.Get<double>());
+    if (Math.Abs(total - 100.0) > 0.01)
+    {
+        throw new Exception("Rarity distribution must sum to 100%");
+    }
+    return new CardBaseGeneratorService(scopeFactory, stackSize, config);
 });
 
 
@@ -45,12 +55,12 @@ builder.Services.AddDbContext<DataContext>(options =>
 
 var app = builder.Build();
 
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
 
 app.UseHttpsRedirection();
 app.UseRouting();
@@ -62,4 +72,34 @@ using (var scope = app.Services.CreateScope())
     dbContext.Database.EnsureCreated();
 }
 
-app.Run();
+app.Use(async (context, next) =>
+{
+    var remoteIp = context.Connection.RemoteIpAddress;
+    var allowedIpPrefix = "192.168."; // локальная сеть
+    if (remoteIp == null || !remoteIp.ToString().StartsWith(allowedIpPrefix))
+    {
+        context.Response.StatusCode = 403;
+        await context.Response.WriteAsync("Access denied.");
+        return;
+    }
+
+    await next.Invoke();
+});
+app.UseWhen(context => context.Request.Path.StartsWithSegments("/swagger"), subApp =>
+{
+    subApp.Use(async (context, next) =>
+    {
+        var remoteIp = context.Connection.RemoteIpAddress;
+        if (remoteIp == null || !remoteIp.ToString().StartsWith("192.168."))
+        {
+            context.Response.StatusCode = 403;
+            await context.Response.WriteAsync("Swagger is not available from your IP.");
+            return;
+        }
+
+        await next.Invoke();
+    });
+});
+
+
+app.Run("http://0.0.0.0:5000");
