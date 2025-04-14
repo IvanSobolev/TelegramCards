@@ -211,7 +211,7 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
                 return;
             }
             var card = await _cardRepository.SendCardAsync(lastTry);
-            _userStarSendCard.Remove(query.From.Id);
+            _userStarSendCard.Remove(msg.Chat.Id);
             await bot.SendMessage(chatId: msg.Chat.Id,
                 text: $"✅ *Карта успешно отправлена!* @{user.Username}",
                 parseMode: ParseMode.Markdown);

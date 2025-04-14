@@ -6,15 +6,23 @@ using TelegramCards.Services.interfaces;
 
 namespace TelegramCards.Services.Implementations;
 
-public class CardBaseGeneratorService(IServiceScopeFactory scopeFactory, int generateLengthStack) : ICardBaseGeneratorService
+public class CardBaseGeneratorService(IServiceScopeFactory scopeFactory, int generateLengthStack, IConfiguration configuration) : ICardBaseGeneratorService
 {
     private readonly IServiceScopeFactory _scopeFactory = scopeFactory;
+    private readonly Dictionary<Rarity, double> _rarityDistribution= new Dictionary<Rarity, double>
+    {
+        [Rarity.Base] = configuration.GetValue<double>("RarityDistribution:Base"),
+        [Rarity.Rare] = configuration.GetValue<double>("RarityDistribution:Rare"),
+        [Rarity.Epic] = configuration.GetValue<double>("RarityDistribution:Epic"),
+        [Rarity.Legendary] = configuration.GetValue<double>("RarityDistribution:Legendary")
+    };
     private readonly int _generateLengthStack = generateLengthStack;
     private readonly ConcurrentQueue<CardOutputDto> _cacheCardBaseStack = new();
     private DateTime _lastCacheUpdate = DateTime.UtcNow;
     private bool _isGenerated = false;
     private readonly object _generationLock = new();
     private static readonly Random _random = new();
+    
     public async Task<CardOutputDto> GetNewCardInRandomCardStackAsync()
     {
         lock (_generationLock)
@@ -38,7 +46,9 @@ public class CardBaseGeneratorService(IServiceScopeFactory scopeFactory, int gen
     {
         using var scope = _scopeFactory.CreateScope();
         var repository = scope.ServiceProvider.GetRequiredService<ICardBaseRepository>();
-        Rarity rarity = (Rarity)_random.Next(0, 3);
+    
+
+        var rarity = GetRandomRarity();
         var card = await repository.GetRandomCardInRarity(rarity);
         return new CardOutputDto
         {
@@ -65,5 +75,21 @@ public class CardBaseGeneratorService(IServiceScopeFactory scopeFactory, int gen
         {
             _isGenerated = false;
         }
+    }
+    
+    private Rarity GetRandomRarity()
+    {
+        double randomValue = _random.NextDouble() * 100.0;
+        double cumulative = 0.0;
+
+        foreach (var rarity in Enum.GetValues<Rarity>())
+        {
+            var probability = _rarityDistribution[rarity];
+            cumulative += probability;
+            if (randomValue <= cumulative)
+                return rarity;
+        }
+
+        return Rarity.Base;
     }
 }
