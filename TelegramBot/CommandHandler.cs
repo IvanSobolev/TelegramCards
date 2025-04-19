@@ -18,6 +18,7 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
     private readonly IUserRepository _userRepository = userRepository;
     private readonly Dictionary<long, DateTime> _userGeneratorDate = new Dictionary<long, DateTime>();
     private readonly Dictionary<long, SendCardDto> _userStarSendCard = new Dictionary<long, SendCardDto>();
+    private readonly Dictionary<long, bool> _userActiveNewCard = new Dictionary<long, bool>();
 
     ReplyKeyboardMarkup replyMarkup = new ReplyKeyboardMarkup(new[]
     {
@@ -90,6 +91,13 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
 
     public async Task GenerateCardCommand(Message msg)
     {
+        if (_userActiveNewCard.TryGetValue(msg.Chat.Id, out var value) && value)
+        {
+            await bot.SendMessage(chatId: msg.Chat.Id,
+                text: "🟠 *Вы не завершили прошлое получение карты*\n\nНажмите на кнопку ✅ под сообщением о получении карты.",
+                parseMode: ParseMode.Markdown);
+            return;
+        }
         if (!_userGeneratorDate.TryGetValue(msg.Chat.Id, out var lastGeneration))
         {
             await bot.SendMessage(chatId: msg.Chat.Id,
@@ -120,8 +128,10 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
         }
 
         string name = card.Creator == null ? $"*{card.Name}*" : $"*{card.Creator}* - {card.Name}";
-
+        
         string rarityEmoji = GetRarityEmoji(card.RarityLevel);
+
+        _userActiveNewCard[msg.Chat.Id] = true;
         try
         {
             using var httpClient = new HttpClient();
@@ -132,7 +142,7 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
                 chatId: msg.Chat.Id,
                 photo: InputFile.FromStream(stream, "card.png"),
                 caption: $"""
-                          🎊 *Новая карта добавлена в вашу коллекцию!*
+                          🎊 *Ваша новая карта!*
 
                           {name}
                           {rarityEmoji} Редкость: *{card.RarityLevel}*
@@ -161,6 +171,14 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
                 parseMode: ParseMode.Markdown
             );
         }
+
+        await _bot.SendMessage(
+            chatId: msg.Chat.Id,
+            text: "Подтвердите принятие карты!",
+            replyMarkup: new InlineKeyboardMarkup(new[]
+            {
+                InlineKeyboardButton.WithCallbackData("✅", $"getcard_{msg.Chat.Id}")
+            }));
     }
 
     public async Task GetMyCardsCommand(Message msg)
@@ -170,7 +188,7 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
         {
             await bot.SendMessage(chatId: msg.Chat.Id,
                 text:
-                "📭 *Ваша коллекция пуста!*\n\nИспользуйте кнопку \"✨ Получить карту\" чтобы добавить первую карту в коллекцию.",
+                "📭 *Ваша коллекция пуста!*\n\nИспользуйте кнопку \"💎 Получить карту\" чтобы добавить первую карту в коллекцию.",
                 parseMode: ParseMode.Markdown);
             return;
         }
@@ -213,7 +231,7 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
             var card = await _cardRepository.SendCardAsync(lastTry);
             _userStarSendCard.Remove(msg.Chat.Id);
             await bot.SendMessage(chatId: msg.Chat.Id,
-                text: $"✅ *Карта успешно отправлена!* @{user.Username}",
+                text: $"✅ *Карта успешно отправлена!* @{user.Username.Replace("_", "\\_")}",
                 parseMode: ParseMode.Markdown);
             string name = card.Creator == null ? $"*{card.Name}*" : $"*{card.Creator}* - {card.Name}";
             string rarityEmoji = GetRarityEmoji(card.RarityLevel);
@@ -229,7 +247,7 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
                     caption: $"""
                               ✉️ *Вы получили новую карту!*
 
-                              От: @{msg.From!.Username}
+                              От: @{msg.From!.Username.Replace("_", "\\_")}
                               Карта #{card.CardBaseId}
 
                               {name}
@@ -248,7 +266,7 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
                     text: $"""
                            ✉️ *Вы получили новую карту!*
 
-                           От: @{msg.From!.Username}
+                           От: @{msg.From!.Username.Replace("_", "\\_")}
                            Карта #{card.CardBaseId}
 
                            {name}
@@ -319,6 +337,14 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
         _userStarSendCard.Add(query.From.Id,
             new SendCardDto { SenderId = query.From.Id, CardId = cardId, NewOwnerId = 0 });
     }
+    
+    public async Task AcceptCardButtonAsync(CallbackQuery query)
+    {
+        Message msg = query.Message!;
+        await bot.DeleteMessage(msg.Chat.Id, msg.MessageId);
+        long userId = int.Parse(query.Data!.Split('_')[1], CultureInfo.InvariantCulture);
+        _userActiveNewCard.Remove(userId);
+    }
 
     public async Task SendCardAsync(long chatId, CardOutputDto card, int page, int lastPage)
     {
@@ -352,7 +378,8 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
 
         buttons.Add(new[]
         {
-            InlineKeyboardButton.WithCallbackData("🎁 Отправить карту", $"send_{card.Id}")
+            InlineKeyboardButton.WithCallbackData("🎁 Отправить карту", $"send_{card.Id}"),
+            InlineKeyboardButton.WithCallbackData("📈Табличный просмотр карт", $"tableview_{page}")
         });
 
         buttons.Add(new[]
@@ -409,15 +436,150 @@ public class CommandHandler(TelegramBotClient bot, ICardRepository cardRepositor
         }
     }
 
+    public async Task ShowTableFormatButtonAsync(CallbackQuery query)
+    {
+        Message msg = query.Message!;
+        await bot.DeleteMessage(msg.Chat.Id, msg.MessageId);
+        int cardId = int.Parse(query.Data!.Split('_')[1], CultureInfo.InvariantCulture);
+        await ShowCardsTableAsync(msg.Chat.Id, (cardId / 15) + 1);
+        Console.WriteLine(cardId + "  " +  (cardId / 15) + 1);
+    }
+    
+    public async Task ShowCardsTableAsync(long chatId, int page = 1, int pageSize = 15)
+{
+    // Получаем данные о картах пользователя
+    AllUserCardDto cardDto = await _cardRepository.GetAllUserCardAsync(chatId, page, pageSize);
+    
+    if (cardDto.Cards.Count < 1 || cardDto.PageCount == 0)
+    {
+        await _bot.SendMessage(
+            chatId: chatId,
+            text: "📭 *Ваша коллекция пуста!*\n\nИспользуйте кнопку \"💎 Получить карту\" чтобы добавить первую карту в коллекцию.",
+            parseMode: ParseMode.Markdown);
+        return;
+    }
+
+    // Формируем таблицу карт
+    var tableHeader = "📋 *Ваша коллекция карт*\n\n";
+    var tableFormat = "`{0,2}|{1,-12}|{2,-2}|{3,4}`";
+    
+    var table = new List<string>
+    {
+        string.Format(tableFormat, "#", "Имя", "R", "Очки"),
+        string.Format(tableFormat, "--", "--------", "--", "----")
+    };
+
+    int index = (page - 1) * pageSize + 1;
+    foreach (var card in cardDto.Cards)
+    {
+        string rarity = GetRarityEmoji(card.RarityLevel);
+        string name = card.Creator ?? card.Name;
+        table.Add(string.Format(tableFormat, 
+                              index++, 
+                              Truncate(name, 10), 
+                              rarity, 
+                              card.Points));
+    }
+
+    // Создаем кнопки для навигации по картам
+    var buttons = new List<InlineKeyboardButton[]>();
+    
+    // Кнопки для выбора конкретной карты (первые 3 ряда)
+    var cardButtons = new List<InlineKeyboardButton>();
+    for (int i = 0; i < cardDto.Cards.Count; i++)
+    {
+        cardButtons.Add(InlineKeyboardButton.WithCallbackData(
+            (i + (page - 1) * pageSize + 1).ToString(), 
+            $"view_{i + (page - 1) * pageSize  + 1}")); // Сохраняем номер страницы и индекс карты
+        
+        if (cardButtons.Count % 5 == 0 || i == cardDto.Cards.Count - 1)
+        {
+            buttons.Add(cardButtons.ToArray());
+            cardButtons.Clear();
+        }
+    }
+
+    // Кнопки для навигации по страницам
+    var navButtons = new List<InlineKeyboardButton>();
+    if (page > 1)
+    {
+        navButtons.Add(InlineKeyboardButton.WithCallbackData("◀️ Назад", $"table_{page - 1}"));
+    }
+    
+    navButtons.Add(InlineKeyboardButton.WithCallbackData(
+        $"📄 {page}/{cardDto.PageCount}", 
+        "table_page"));
+    
+    if (page < cardDto.PageCount)
+    {
+        navButtons.Add(InlineKeyboardButton.WithCallbackData("Вперёд ▶️", $"table_{page + 1}"));
+    }
+    
+    buttons.Add(navButtons.ToArray());
+
+    // Кнопка выхода
+    buttons.Add(new[]
+    {
+        InlineKeyboardButton.WithCallbackData("🚪 Выход", "exit")
+    });
+
+    var inlineKeyboard = new InlineKeyboardMarkup(buttons);
+
+
+    // Отправляем сообщение с таблицей
+    await _bot.SendMessage(
+        chatId: chatId,
+        text: tableHeader + string.Join("\n", table),
+        parseMode: ParseMode.Markdown,
+        replyMarkup: inlineKeyboard);
+}
+
+// Обработчик кнопок таблицы
+    public async Task HandleTableNavigationAsync(CallbackQuery query)
+    {
+        if (int.TryParse(query.Data!.Split('_')[1], out int page))
+        {
+            await _bot.DeleteMessage(query.Message!.Chat.Id, query.Message.MessageId);
+            await ShowCardsTableAsync(query.Message.Chat.Id, page);
+        }
+    }
+
+    public async Task HandleCardViewAsync(CallbackQuery query)
+    {
+        var parts = query.Data!.Split('_');
+        if (parts.Length == 2 && int.TryParse(parts[1], out int cardIndex))
+        {
+            await _bot.DeleteMessage(query.Message!.Chat.Id, query.Message.MessageId);
+        
+            var cards = await _cardRepository.GetAllUserCardAsync(query.Message.Chat.Id, cardIndex, 1);
+        
+            await SendCardAsync(
+                query.Message.Chat.Id, 
+                cards.Cards.First(), 
+                cardIndex, 
+                cards.PageCount);
+        }
+    }
+
     private static string GetRarityEmoji(Rarity rarity)
     {
         return rarity switch
         {
             Rarity.Wood => "🪵",
             Rarity.Iron => "🪨",
-            Rarity.Gold => "🪙",
+            Rarity.Gold => "🥇",
             Rarity.Diamonds => "💎"
         };
+    }
+    
+    private static string Truncate(string value, int maxLength)
+    {
+        if (string.IsNullOrEmpty(value)) 
+            return value;
+    
+        return value.Length <= maxLength ? 
+            value : 
+            value.Substring(0, maxLength - 3) + "...";
     }
 
 }

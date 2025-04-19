@@ -51,6 +51,9 @@ class Program
             case ("🧊 Посмотреть карты"):
                 await _commandHandler.GetMyCardsCommand(msg);
                 break;
+            case ("table"):
+                await _commandHandler.ShowCardsTableAsync(msg.Chat.Id);
+                break;
             default:
                 await _commandHandler.NoCommandMessage(msg);
                 break;
@@ -74,6 +77,18 @@ class Program
                     break;
                 case ("send"):
                     await _commandHandler.SendCardButtonAsync(query);
+                    break;
+                case ("getcard"):
+                    await _commandHandler.AcceptCardButtonAsync(query);
+                    break;
+                case ("table"):
+                    await _commandHandler.HandleTableNavigationAsync(query);
+                    break;
+                case ("view"):
+                    await _commandHandler.HandleCardViewAsync(query);
+                    break;
+                case ("tableview"):
+                    await _commandHandler.ShowTableFormatButtonAsync(query);
                     break;
             }
         }
